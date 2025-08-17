@@ -52,6 +52,16 @@ app.use(express.static(path.join(__dirname, '..', 'frontend', 'build')));
 // Database connection
 const { sequelize, User, Company } = require('./models');
 
+// Health check endpoint
+app.get('/api/health', (req, res) => {
+  res.json({ 
+    status: 'ok', 
+    timestamp: new Date().toISOString(),
+    service: 'react-dashboard-backend',
+    version: '1.0.0'
+  });
+});
+
 // Import routes
 const authRoutes = require('./routes/auth');
 const userRoutes = require('./routes/users');

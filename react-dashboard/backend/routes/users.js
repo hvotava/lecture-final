@@ -380,6 +380,7 @@ router.post('/:id/call', auth, adminOnly, async (req, res) => {
         const statusBackendUrl = getStatusBackendUrl();
         console.log('🔍 Using voice backend URL for Twilio webhooks:', voiceBackendUrl);
         console.log('🔍 Using status backend URL for Twilio webhooks:', statusBackendUrl);
+        console.log('🎯 FINAL WebRTC Voice URL:', `${statusBackendUrl}/api/twilio/webrtc/voice/incoming`);
 
         const call = await twilioClient.calls.create({
           to: user.phone,

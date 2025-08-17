@@ -65,7 +65,7 @@ class ContentSource(Base):
     file_size = mapped_column(Integer, nullable=True)  # File size in bytes
     processing_status = mapped_column(Enum(ProcessingStatus), nullable=False, default=ProcessingStatus.PROCESSING)
     processing_error = mapped_column(Text, nullable=True)  # Error message if processing failed
-    metadata = mapped_column(JSON, nullable=False, default=dict)  # Word count, language, etc.
+    file_metadata = mapped_column(JSON, nullable=False, default=dict)  # Word count, language, etc.
     created_at = mapped_column(DateTime, nullable=False, default=datetime.utcnow)
     processed_at = mapped_column(DateTime, nullable=True)
     

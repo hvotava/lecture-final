@@ -1894,7 +1894,7 @@ async def upload_content(
                     raw_text = content.decode('utf-8')
                 
                 content_source.raw_content = raw_text
-                content_source.metadata = {
+                content_source.file_metadata = {
                     "word_count": len(raw_text.split()),
                     "char_count": len(raw_text),
                     "processing_date": datetime.utcnow().isoformat()
@@ -1913,7 +1913,7 @@ async def upload_content(
                 "title": content_source.title,
                 "status": content_source.processing_status.value,
                 "file_size": content_source.file_size,
-                "word_count": content_source.metadata.get("word_count", 0) if content_source.metadata else 0
+                "word_count": content_source.file_metadata.get("word_count", 0) if content_source.file_metadata else 0
             })
         
         return JSONResponse(content={
@@ -2060,7 +2060,7 @@ async def get_company_content(company_id: int):
                 "content_type": source.content_type.value,
                 "processing_status": source.processing_status.value,
                 "file_size": source.file_size,
-                "word_count": source.metadata.get("word_count", 0) if source.metadata else 0,
+                "word_count": source.file_metadata.get("word_count", 0) if source.file_metadata else 0,
                 "created_at": source.created_at.isoformat(),
                 "processed_at": source.processed_at.isoformat() if source.processed_at else None,
                 "has_course": len(source.courses) > 0

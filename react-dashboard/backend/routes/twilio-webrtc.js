@@ -53,11 +53,11 @@ router.post('/voice/incoming', async (req, res) => {
         // Vytvoření TwiML odpovědi pro WebRTC s browser signaling
         const twiml = new twilio.twiml.VoiceResponse();
         
-        // Přidáme krátké Say pro udržení hovoru aktivního
-        twiml.say({
-            language: 'cs-CZ',
-            voice: 'Google.cs-CZ-Standard-A'
-        }, 'Připojuji vás k AI asistentovi.');
+        // DOČASNĚ ODSTRANĚNO Say - přímý WebSocket test
+        // twiml.say({
+        //     language: 'cs-CZ',
+        //     voice: 'Google.cs-CZ-Standard-A'
+        // }, 'Připojuji vás k AI asistentovi.');
         
         console.log(`[WebRTC-Signaling] TwiML vygenerováno pro ${CallSid}`);
 
@@ -71,6 +71,8 @@ router.post('/voice/incoming', async (req, res) => {
         });
         
         console.log(`[WebRTC-Signaling] WebSocket URL (hlavní port): wss://${req.get('host')}/api/twilio/webrtc/stream/${CallSid}`);
+        console.log(`[WebRTC-Signaling] Express-WS instance:`, !!wsInstance);
+        console.log(`[WebRTC-Signaling] WebSocket routes registered:`, app._router ? 'YES' : 'NO');
 
         // Uložení spojení info (pokud ještě nebylo uloženo s lesson daty)
         if (!activeConnections.has(CallSid)) {
@@ -99,6 +101,21 @@ router.post('/voice/incoming', async (req, res) => {
 });
 
 
+
+/**
+ * TEST WebSocket endpoint pro diagnostiku
+ */
+router.ws('/test', (ws, req) => {
+    console.log(`[WebRTC-TEST] WebSocket test připojen!`);
+    ws.send('WebSocket funguje!');
+    ws.on('message', (msg) => {
+        console.log(`[WebRTC-TEST] Zpráva:`, msg.toString());
+        ws.send(`Echo: ${msg}`);
+    });
+    ws.on('close', () => {
+        console.log(`[WebRTC-TEST] WebSocket test uzavřen`);
+    });
+});
 
 /**
  * Express WebSocket endpoint pro Twilio Media Stream

@@ -62,10 +62,13 @@ router.post('/voice/incoming', async (req, res) => {
         console.log(`[WebRTC-Signaling] TwiML vygenerováno pro ${CallSid}`);
 
         // Připojení k WebSocket stream pro signaling
+        const wsUrl = `wss://${req.get('host')}/api/twilio/webrtc/stream/${CallSid}`;
+        console.log(`[WebRTC-Signaling] WebSocket URL: ${wsUrl}`);
+        
         const connect = twiml.connect();
         connect.stream({
             name: 'webrtc_signaling_stream',
-            url: `wss://${req.get('host')}/api/twilio/webrtc/stream/${CallSid}`,
+            url: wsUrl,
             track: 'both_tracks'
         });
 
@@ -83,8 +86,11 @@ router.post('/voice/incoming', async (req, res) => {
 
         console.log(`[WebRTC-Signaling] Signaling connection info uloženo pro ${CallSid}`);
 
+        const twimlString = twiml.toString();
+        console.log(`[WebRTC-Signaling] TwiML odpověď:`, twimlString);
+        
         res.type('text/xml');
-        res.send(twiml.toString());
+        res.send(twimlString);
 
     } catch (error) {
         console.error('[WebRTC-Signaling] Chyba při zpracování příchozího hovoru:', error);

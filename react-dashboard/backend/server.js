@@ -11,8 +11,9 @@ const bcrypt = require('bcryptjs');
 require('dotenv').config();
 
 const app = express();
-// Enable WebSocket support
-expressWs(app);
+// Enable WebSocket support for Railway
+const server = require('http').createServer(app);
+const wsInstance = expressWs(app, server);
 const PORT = process.env.PORT || 5000;
 
 // CRITICAL: Trust proxy for Railway deployment (fixes X-Forwarded-For error)
@@ -374,7 +375,7 @@ const startServer = async () => {
     // Vytvoř výchozího admina
     await createDefaultAdmin();
     
-    app.listen(PORT, () => {
+    server.listen(PORT, () => {
       console.log(`🚀 Server running on port ${PORT}`);
       console.log(`🔥 DATABASE QUESTIONS DEPLOYMENT - Version 2025-08-06-16:48`);
       console.log(`📊 Dashboard API: http://localhost:${PORT}/api`);

@@ -61,17 +61,16 @@ router.post('/voice/incoming', async (req, res) => {
         
         console.log(`[WebRTC-Signaling] TwiML vygenerováno pro ${CallSid}`);
 
-        // DOČASNĚ: Použijeme Record místo WebSocket Stream (kvůli Railway WSS problémům)
-        twiml.record({
-            timeout: 10,
-            maxLength: 30,
-            action: `https://${req.get('host')}/api/twilio/webrtc/process/${CallSid}`,
-            method: 'POST',
-            transcribe: true,
-            transcribeCallback: `https://${req.get('host')}/api/twilio/webrtc/transcribe/${CallSid}`
+        // Twilio Media Stream pro obousměrnou konverzaci s barge-in
+        // KRITICKÉ: Bez tohoto není možná přerušitelná konverzace!
+        const connect = twiml.connect();
+        connect.stream({
+            name: 'openai_realtime_stream',
+            url: `wss://${req.get('host')}/api/twilio/webrtc/stream/${CallSid}`,
+            track: 'both_tracks'  // Obousměrný audio stream pro barge-in
         });
         
-        console.log(`[WebRTC-Signaling] FALLBACK: Používám Record místo WebSocket Stream`);
+        console.log(`[WebRTC-Signaling] Twilio Media Stream URL: wss://${req.get('host')}/api/twilio/webrtc/stream/${CallSid}`);
 
         // Uložení spojení info (pokud ještě nebylo uloženo s lesson daty)
         if (!activeConnections.has(CallSid)) {

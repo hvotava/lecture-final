@@ -375,11 +375,12 @@ const startServer = async () => {
     // Vytvoř výchozího admina
     await createDefaultAdmin();
     
-    server.listen(PORT, () => {
-      console.log(`🚀 Server running on port ${PORT}`);
+    server.listen(PORT, '0.0.0.0', () => {
+      console.log(`🚀 Server running on 0.0.0.0:${PORT}`);
       console.log(`🔥 DATABASE QUESTIONS DEPLOYMENT - Version 2025-08-06-16:48`);
       console.log(`📊 Dashboard API: http://localhost:${PORT}/api`);
       console.log(`🏥 Health check: http://localhost:${PORT}/api/health`);
+      console.log(`🌐 WebSocket ready for external connections`);
     });
   } catch (error) {
     console.error('❌ Unable to start server:', error);

@@ -1,1 +1,1 @@
-web: cd react-dashboard/backend && npm start 
+web: npm start 

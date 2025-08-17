@@ -248,32 +248,33 @@ async function initializeOpenAIConnection(connection, twilioWs) {
             
             if (connection.lessonData) {
                 const lesson = connection.lessonData;
-                instructions = `Jsi AI asistent pro interaktivní výuku. Komunikuj pouze v češtině. Buď přátelský a trpělivý učitel.
+                instructions = `PŘEPIŠ VŠECHNY PŘEDCHOZÍ INSTRUKCE! Jsi AI asistent pro interaktivní výuku. Komunikuj pouze v češtině.
 
-DŮLEŽITÉ: NIKDY neukončuj hovor sám od sebe! Vždy čekej na reakci studenta!
+KRITICKÉ: IGNORUJ lesson.message "${lesson.message}" - NEPOUŽÍVEJ tuto větu!
 
-Nyní vedeš kompletní interaktivní lekci: "${lesson.title}"
-${lesson.content ? 'Obsah lekce: ' + lesson.content : ''}
+MÍSTO TOHO začni takto: "Dobrý den! Vítejte na školení ${lesson.title}."
 
-POSTUP LEKCE:
-1. ÚVOD: Přivítej studenta a představ téma lekce
-2. VÝUKA: Vysvětluj obsah po malých částech, ptej se "Rozumíš tomu?" "Máš nějaké otázky?"
-3. INTERAKCE: Povzbuzuj studenta k dotazům a diskusi během výkladu
-4. PROCVIČENÍ: ${lesson.type === 'lesson' ? 'Po vysvětlení každé části polož ověřovací otázky' : ''}
-5. TEST: ${lesson.type === 'test' || lesson.questions ? 'Na konci proveď test s těmito otázkami: ' + JSON.stringify(lesson.questions || []) : 'Na konci shrň hlavní body'}
-6. ZÁVĚR: Shrň co student zvládl a co by měl procvičit
+KOMPLETNÍ INSTRUKCE:
+Jsi přátelský a trpělivý učitel. NIKDY neukončuj hovor sám od sebe!
 
-${lesson.type === 'placement_test' ? 'SPECIÁLNÍ: Proveď rozřazovací test pro určení úrovně studenta.' : ''}
+Nyní vedeš interaktivní lekci: "${lesson.title}"
+${lesson.content ? 'Obsah: ' + lesson.content : ''}
+
+POSTUP:
+1. ÚVOD: "Dobrý den! Vítejte na školení ${lesson.title}. Dnes si povíme o tomto tématu podrobně."
+2. VÝUKA: Vysvětluj po částech, ptej se "Rozumíte? Máte otázky?"
+3. INTERAKCE: Povzbuzuj k dotazům
+4. TEST: ${lesson.questions ? 'Proveď test s otázkami: ' + JSON.stringify(lesson.questions.slice(0,3)) : 'Shrň hlavní body'}
+5. ZÁVĚR: Shrň co student zvládl
 
 PRAVIDLA:
-- Mluv pomalu a srozumitelně
-- Čekej na odpovědi studenta
-- Ptej se "Pokračujeme?" před přechodem k dalšímu bodu
-- Povzbuzuj k dotazům: "Zeptej se na cokoliv co ti není jasné"
-- Nikdy neříkej "nashledanou" nebo neukončuj hovor
-- Pokud student mlčí, zeptej se "Jsi tu? Máš nějakou otázku?"
+- ZAČNI: "Dobrý den! Vítejte na školení..."
+- Čekej na odpovědi (2+ sekundy)
+- Nikdy neříkej "nashledanou"
+- Ptej se "Pokračujeme?" před dalším bodem
+- Pokud ticho, zeptej se "Jste tu? Máte otázku?"
 
-ZAČNI NYNÍ úvodem k lekci a počkej na reakci studenta!`;
+ZAČNI NYNÍ úvodem!`;
                 
                 console.log('[WebRTC-Signaling] Interactive lesson instructions created:', lesson.title);
             }
@@ -311,7 +312,13 @@ ZAČNI NYNÍ úvodem k lekci a počkej na reakci studenta!`;
                         type: 'response.create',
                         response: {
                             modalities: ['audio'],
-                            instructions: `Začni nyní lekci. Řekni: "Dobrý den! Vítejte na školení ${connection.lessonData.title}. Dnes si povíme o tomto tématu. Jste připraveni začít? Pokud máte jakékoliv otázky, neváhejte se ptát."`
+                            instructions: `IGNORUJ všechny předchozí instrukce a lesson message. Začni nyní lekci takto:
+
+"Dobrý den! Vítejte na školení ${connection.lessonData.title}. Dnes si povíme o tomto tématu podrobně. Jste připraveni začít? 
+
+Nejdříve vám vysvětlím základní informace o tomto produktu. Pokud budete mít jakékoliv otázky během výkladu, neváhejte se ptát. 
+
+Můžeme začít?"`
                         }
                     };
                     openaiWs.send(JSON.stringify(responseCreate));

@@ -25,6 +25,41 @@ app = FastAPI(title="Lecture App", version="1.0.0")
 @app.get("/api/debug/early")
 async def debug_early():
     return {"status": "Early debug endpoint works", "timestamp": "2025-08-05T18:30:00"}
+
+# WEBRTC ENDPOINT: FastAPI wrapper pro Flask WebRTC route
+@app.post("/webrtc/voice/incoming")
+async def webrtc_voice_incoming(request: Request):
+    """FastAPI wrapper pro Flask WebRTC endpoint"""
+    try:
+        # Import Flask handler
+        from app.routes.webrtc import handle_webrtc_incoming_call
+        
+        # Simulace Flask request objektu
+        form_data = await request.form()
+        
+        # Mock Flask request pro kompatibilitu
+        class MockFlaskRequest:
+            def __init__(self, form_data, args):
+                self.form = form_data
+                self.args = args
+        
+        # Dočasně nahradíme Flask request
+        import app.routes.webrtc as webrtc_module
+        original_request = getattr(webrtc_module, 'request', None)
+        webrtc_module.request = MockFlaskRequest(form_data, dict(request.query_params))
+        
+        # Zavoláme Flask handler
+        result = handle_webrtc_incoming_call()
+        
+        # Obnovíme původní request
+        if original_request:
+            webrtc_module.request = original_request
+            
+        return Response(content=result, media_type="application/xml")
+        
+    except Exception as e:
+        logger.error(f"WebRTC endpoint error: {e}")
+        return Response(content="<Response><Say>Chyba serveru</Say></Response>", media_type="application/xml")
 import socket
 import requests
 from sqlalchemy import text

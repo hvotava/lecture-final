@@ -61,22 +61,17 @@ router.post('/voice/incoming', async (req, res) => {
         
         console.log(`[WebRTC-Signaling] TwiML vygenerováno pro ${CallSid}`);
 
-        // DOČASNĚ: Zkusíme bez WebSocket stream - jen pause
-        twiml.pause({ length: 5 });
-        twiml.say({
-            language: 'cs-CZ',
-            voice: 'Google.cs-CZ-Standard-A'
-        }, 'Test dokončen. Nashledanou.');
+        // DOČASNĚ: Použijeme Record místo WebSocket Stream (kvůli Railway WSS problémům)
+        twiml.record({
+            timeout: 10,
+            maxLength: 30,
+            action: `https://${req.get('host')}/api/twilio/webrtc/process/${CallSid}`,
+            method: 'POST',
+            transcribe: true,
+            transcribeCallback: `https://${req.get('host')}/api/twilio/webrtc/transcribe/${CallSid}`
+        });
         
-        // PŮVODNÍ WebSocket kód (zakomentováno pro test):
-        // const wsUrl = `wss://${req.get('host')}/api/twilio/webrtc/stream/${CallSid}`;
-        // console.log(`[WebRTC-Signaling] WebSocket URL: ${wsUrl}`);
-        // const connect = twiml.connect();
-        // connect.stream({
-        //     name: 'webrtc_signaling_stream',
-        //     url: wsUrl,
-        //     track: 'both_tracks'
-        // });
+        console.log(`[WebRTC-Signaling] FALLBACK: Používám Record místo WebSocket Stream`);
 
         // Uložení spojení info (pokud ještě nebylo uloženo s lesson daty)
         if (!activeConnections.has(CallSid)) {

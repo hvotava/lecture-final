@@ -1,0 +1,11 @@
+FORCE PYTHON REBUILD - 2025-08-17-21:45
+========================================
+
+Railway: Přepnout z Node.js na Python Flask
+Nixpacks: Použít python39 místo nodejs_18
+StartCommand: python main.py místo npm start
+
+WebRTC endpoint: /webrtc/voice/incoming
+FastAPI WebSocket: /webrtc-audio
+
+Timestamp: 1692310500 

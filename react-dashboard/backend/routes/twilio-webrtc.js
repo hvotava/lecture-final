@@ -71,8 +71,6 @@ router.post('/voice/incoming', async (req, res) => {
         });
         
         console.log(`[WebRTC-Signaling] WebSocket URL (hlavní port): wss://${req.get('host')}/api/twilio/webrtc/stream/${CallSid}`);
-        console.log(`[WebRTC-Signaling] Express-WS instance:`, !!wsInstance);
-        console.log(`[WebRTC-Signaling] WebSocket routes registered:`, app._router ? 'YES' : 'NO');
 
         // Uložení spojení info (pokud ještě nebylo uloženo s lesson daty)
         if (!activeConnections.has(CallSid)) {

@@ -60,6 +60,49 @@ async def webrtc_voice_incoming(request: Request):
     except Exception as e:
         logger.error(f"WebRTC endpoint error: {e}")
         return Response(content="<Response><Say>Chyba serveru</Say></Response>", media_type="application/xml")
+
+# API COMPATIBILITY: Node.js dashboard API routes
+@app.post("/api/users/{user_id}/call")
+async def call_user(user_id: int):
+    """Kompatibilita s Node.js API - iniciace hovoru"""
+    try:
+        # Import Twilio client
+        from twilio.rest import Client
+        
+        # Twilio konfigurace
+        account_sid = os.getenv('TWILIO_ACCOUNT_SID')
+        auth_token = os.getenv('TWILIO_AUTH_TOKEN')
+        twilio_phone = os.getenv('TWILIO_PHONE_NUMBER')
+        
+        if not all([account_sid, auth_token, twilio_phone]):
+            return JSONResponse({"error": "Twilio not configured"}, status_code=500)
+            
+        client = Client(account_sid, auth_token)
+        
+        # Najdi uživatele
+        session = SessionLocal()
+        user = session.query(User).filter(User.id == user_id).first()
+        if not user:
+            return JSONResponse({"error": "User not found"}, status_code=404)
+            
+        # Iniciace hovoru
+        call = client.calls.create(
+            to=f"+{user.phone}",
+            from_=twilio_phone,
+            url=f"https://{os.getenv('RAILWAY_PUBLIC_DOMAIN', 'localhost:8080')}/webrtc/voice/incoming",
+            method='POST',
+            record=False
+        )
+        
+        return JSONResponse({
+            "success": True,
+            "call_sid": call.sid,
+            "status": call.status
+        })
+        
+    except Exception as e:
+        logger.error(f"Call initiation error: {e}")
+        return JSONResponse({"error": str(e)}, status_code=500)
 import socket
 import requests
 from sqlalchemy import text
@@ -107,6 +150,9 @@ except Exception as e:
 
 # Mount static files
 app.mount("/static", StaticFiles(directory="app/static"), name="static")
+
+# React frontend bude v separátním Node.js service
+print("📱 Frontend dashboard běží na separátním Node.js service")
 
 # Startup event handler pro diagnostiku - musí být rychlý pro health check
 @app.on_event("startup")

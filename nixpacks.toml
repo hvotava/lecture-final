@@ -1,18 +1,15 @@
 [phases.setup]
-nixPkgs = ["nodejs_18", "npm"]
+nixPkgs = ["python39", "pip"]
 
 [phases.install]
 cmds = [
-    "cd react-dashboard/frontend && npm ci",
-    "cd react-dashboard/backend && npm ci --only=production"
+    "pip install -r requirements.txt"
 ]
 
 [phases.build]
 cmds = [
-    "cd react-dashboard/frontend && npm run build",
-    "echo 'Build completed'"
+    "echo 'Python build completed'"
 ]
 
 [start]
-workDir = "react-dashboard/backend"
-cmd = "npm start" 
+cmd = "python main.py" 

@@ -290,6 +290,32 @@ ZAČNI NYNÍ úvodem k lekci a počkej na reakci studenta!`;
             };
 
             openaiWs.send(JSON.stringify(sessionConfig));
+            
+            // Po konfiguraci session, pošli initial message pro start lekce
+            if (connection.lessonData) {
+                setTimeout(() => {
+                    const initialMessage = {
+                        type: 'conversation.item.create',
+                        item: {
+                            type: 'message',
+                            role: 'user',
+                            content: [{
+                                type: 'input_text',
+                                text: 'Začni lekci. Přivítej mě a představ téma lekce.'
+                            }]
+                        }
+                    };
+                    openaiWs.send(JSON.stringify(initialMessage));
+                    
+                    // Trigger response
+                    const responseCreate = {
+                        type: 'response.create'
+                    };
+                    openaiWs.send(JSON.stringify(responseCreate));
+                    
+                    console.log('[WebRTC-Signaling] Initial lesson start message sent to OpenAI');
+                }, 1000);
+            }
         });
 
         openaiWs.on('message', (data) => {
@@ -331,6 +357,20 @@ ZAČNI NYNÍ úvodem k lekci a počkej na reakci studenta!`;
                         if (message.transcript) {
                             console.log(`[WebRTC-Signaling] Transkripce: ${message.transcript}`);
                         }
+                        break;
+                        
+                    case 'response.done':
+                        console.log('[WebRTC-Signaling] OpenAI response dokončena');
+                        // AI dokončila odpověď, čeká na další vstup od uživatele
+                        // NEUKONČUJ hovor - nech AI čekat na další otázky
+                        break;
+                        
+                    case 'session.created':
+                        console.log('[WebRTC-Signaling] OpenAI session vytvořena');
+                        break;
+                        
+                    case 'session.updated':
+                        console.log('[WebRTC-Signaling] OpenAI session aktualizována');
                         break;
 
                     case 'error':

@@ -227,6 +227,18 @@ async function initializeOpenAIConnection(connection, twilioWs) {
         });
 
         connection.openaiWs = openaiWs;
+        
+        // Keep-alive timer pro udržení Twilio spojení
+        connection.keepAliveTimer = setInterval(() => {
+            if (twilioWs.readyState === WebSocket.OPEN) {
+                // Pošli prázdný keep-alive message do Twilio
+                twilioWs.send(JSON.stringify({
+                    event: 'keep-alive',
+                    streamSid: connection.streamSid
+                }));
+                console.log('[WebRTC-Signaling] Keep-alive sent to Twilio');
+            }
+        }, 30000); // Každých 30 sekund
 
         openaiWs.on('open', () => {
             console.log('[WebRTC-Signaling] OpenAI WebSocket připojen');
@@ -278,9 +290,9 @@ ZAČNI NYNÍ úvodem k lekci a počkej na reakci studenta!`;
                     input_audio_transcription: { model: 'whisper-1' },
                     turn_detection: {
                         type: 'server_vad',
-                        threshold: 0.5,
-                        prefix_padding_ms: 300,
-                        silence_duration_ms: 1500  // Delší čekání na odpověď studenta
+                        threshold: 0.6,  // Vyšší threshold = méně citlivé na šum
+                        prefix_padding_ms: 500,  // Delší padding
+                        silence_duration_ms: 2000  // Ještě delší čekání na odpověď
                     },
                     tools: [],
                     tool_choice: 'auto',
@@ -294,26 +306,17 @@ ZAČNI NYNÍ úvodem k lekci a počkej na reakci studenta!`;
             // Po konfiguraci session, pošli initial message pro start lekce
             if (connection.lessonData) {
                 setTimeout(() => {
-                    const initialMessage = {
-                        type: 'conversation.item.create',
-                        item: {
-                            type: 'message',
-                            role: 'user',
-                            content: [{
-                                type: 'input_text',
-                                text: 'Začni lekci. Přivítej mě a představ téma lekce.'
-                            }]
-                        }
-                    };
-                    openaiWs.send(JSON.stringify(initialMessage));
-                    
-                    // Trigger response
+                    // Zkusíme jednodušší přístup - jen spustíme response bez user message
                     const responseCreate = {
-                        type: 'response.create'
+                        type: 'response.create',
+                        response: {
+                            modalities: ['audio'],
+                            instructions: `Začni nyní lekci. Řekni: "Dobrý den! Vítejte na školení ${connection.lessonData.title}. Dnes si povíme o tomto tématu. Jste připraveni začít? Pokud máte jakékoliv otázky, neváhejte se ptát."`
+                        }
                     };
                     openaiWs.send(JSON.stringify(responseCreate));
                     
-                    console.log('[WebRTC-Signaling] Initial lesson start message sent to OpenAI');
+                    console.log('[WebRTC-Signaling] Initial response trigger sent to OpenAI');
                 }, 1000);
             }
         });
@@ -360,9 +363,11 @@ ZAČNI NYNÍ úvodem k lekci a počkej na reakci studenta!`;
                         break;
                         
                     case 'response.done':
-                        console.log('[WebRTC-Signaling] OpenAI response dokončena');
+                        console.log('[WebRTC-Signaling] OpenAI response dokončena - čekám na další vstup od uživatele');
+                        console.log('[WebRTC-Signaling] Response details:', message.response?.status);
                         // AI dokončila odpověď, čeká na další vstup od uživatele
                         // NEUKONČUJ hovor - nech AI čekat na další otázky
+                        // Hovor by měl zůstat aktivní pro další interakci
                         break;
                         
                     case 'session.created':
@@ -388,6 +393,11 @@ ZAČNI NYNÍ úvodem k lekci a počkej na reakci studenta!`;
 
         openaiWs.on('close', () => {
             console.log('[WebRTC-Signaling] OpenAI WebSocket uzavřen');
+            // Vyčisti keep-alive timer
+            if (connection.keepAliveTimer) {
+                clearInterval(connection.keepAliveTimer);
+                connection.keepAliveTimer = null;
+            }
         });
 
     } catch (error) {

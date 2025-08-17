@@ -17,6 +17,10 @@ from fastapi import APIRouter, Form, status, Depends
 from starlette.requests import Request
 from typing import Optional
 from fastapi import Path
+
+# KRITICKÉ: Definice app PŘED použitím
+app = FastAPI(title="Lecture App", version="1.0.0")
+
 # EARLY DEBUG: Test endpoint at the very beginning
 @app.get("/api/debug/early")
 async def debug_early():
@@ -64,7 +68,7 @@ try:
 except Exception as e:
     print(f"❌ Config check failed: {e}")
 
-app = FastAPI(title="Lecture App", version="1.0.0")
+# app už je definovaná na řádku 20
 
 # Mount static files
 app.mount("/static", StaticFiles(directory="app/static"), name="static")

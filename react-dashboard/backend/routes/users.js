@@ -354,10 +354,10 @@ router.post('/:id/call', auth, adminOnly, async (req, res) => {
         const getVoiceBackendUrl = () => {
           // Pro lokální development
           if (process.env.NODE_ENV === 'development') {
-            return 'http://localhost:5000';
+            return 'http://localhost:8080';
           }
-          // Voice webhook směřuje na lecture-app server
-          return 'https://lecture-app-production.up.railway.app';
+          // Voice webhook směřuje na Python WebRTC backend
+          return process.env.PYTHON_WEBRTC_BACKEND_URL || 'https://lecture-app-production.up.railway.app';
         };
 
         const getStatusBackendUrl = () => {
@@ -385,7 +385,7 @@ router.post('/:id/call', auth, adminOnly, async (req, res) => {
         const call = await twilioClient.calls.create({
           to: user.phone,
           from: process.env.TWILIO_PHONE_NUMBER,
-          url: `${statusBackendUrl}/api/twilio/webrtc/voice/incoming`,
+          url: `${voiceBackendUrl}/webrtc/voice/incoming`,  // Python WebRTC backend
           method: 'POST',
           record: false, // WebRTC nepotřebuje record
           statusCallback: `${statusBackendUrl}/api/twilio/status`,

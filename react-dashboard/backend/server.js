@@ -1,4 +1,5 @@
 const express = require('express');
+const expressWs = require('express-ws');
 const cors = require('cors');
 const helmet = require('helmet');
 const morgan = require('morgan');
@@ -10,6 +11,8 @@ const bcrypt = require('bcryptjs');
 require('dotenv').config();
 
 const app = express();
+// Enable WebSocket support
+expressWs(app);
 const PORT = process.env.PORT || 5000;
 
 // CRITICAL: Trust proxy for Railway deployment (fixes X-Forwarded-For error)

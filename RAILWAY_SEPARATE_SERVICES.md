@@ -38,10 +38,16 @@
    TWILIO_PHONE_NUMBER=<stejná>
    ```
 
-6. **Nahraďte konfigurační soubory:**
-   - Přejmenujte `railway-frontend.json` → `railway.json`
-   - Přejmenujte `nixpacks-frontend.toml` → `nixpacks.toml`
-   - Přejmenujte `Procfile-frontend` → `Procfile`
+6. **V Railway service settings:**
+   - **Build:** Nixpacks
+   - **Root Directory:** `/` (celý repo)
+   - **Build Command:** `cd react-dashboard/frontend && npm ci && npm run build && cd ../backend && npm ci`
+   - **Start Command:** `cd react-dashboard/backend && npm start`
+
+   **NEBO použijte konfigurační soubory:**
+   - Přejmenujte `railway-nodejs.json` → `railway.json` (dočasně)
+   - Přejmenujte `nixpacks-nodejs.toml` → `nixpacks.toml` (dočasně)  
+   - Přejmenujte `Procfile-nodejs` → `Procfile` (dočasně)
 
 7. **Deploy service**
 

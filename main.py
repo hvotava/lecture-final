@@ -1,5 +1,5 @@
 import os
-from fastapi import FastAPI, Request, WebSocket, WebSocketDisconnect, Response
+from fastapi import FastAPI, Request, WebSocket, WebSocketDisconnect, Response, File, UploadFile
 from fastapi.responses import PlainTextResponse, HTMLResponse, RedirectResponse, JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
@@ -15,7 +15,7 @@ from fastapi import Query
 from fastapi.templating import Jinja2Templates
 from fastapi import APIRouter, Form, status, Depends
 from starlette.requests import Request
-from typing import Optional
+from typing import Optional, List
 from fastapi import Path
 
 # KRITICKÉ: Definice app PŘED použitím

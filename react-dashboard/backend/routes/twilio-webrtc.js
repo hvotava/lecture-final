@@ -53,8 +53,13 @@ router.post('/voice/incoming', async (req, res) => {
         // Vytvoření TwiML odpovědi pro WebRTC s browser signaling
         const twiml = new twilio.twiml.VoiceResponse();
         
-        // ODSTRANĚNO: twiml.say() - nech AI mluvit přes OpenAI místo Twilio TTS
-        // Twilio TTS říkalo "Začínáme školení..." před OpenAI připojením
+        // Přidáme krátké Say pro udržení hovoru aktivního
+        twiml.say({
+            language: 'cs-CZ',
+            voice: 'Google.cs-CZ-Standard-A'
+        }, 'Připojuji vás k AI asistentovi.');
+        
+        console.log(`[WebRTC-Signaling] TwiML vygenerováno pro ${CallSid}`);
 
         // Připojení k WebSocket stream pro signaling
         const connect = twiml.connect();
@@ -93,13 +98,17 @@ router.post('/voice/incoming', async (req, res) => {
 router.ws('/stream/:callSid', (ws, req) => {
     const callSid = req.params.callSid;
     console.log(`[WebRTC-Signaling] WebSocket připojen pro ${callSid}`);
+    console.log(`[WebRTC-Signaling] Aktivní spojení:`, Array.from(activeConnections.keys()));
 
     const connection = activeConnections.get(callSid);
     if (!connection) {
         console.error(`[WebRTC-Signaling] Spojení nenalezeno pro ${callSid}`);
+        console.error(`[WebRTC-Signaling] Dostupná spojení:`, Array.from(activeConnections.keys()));
         ws.close();
         return;
     }
+    
+    console.log(`[WebRTC-Signaling] Spojení nalezeno, status:`, connection.status);
 
     let streamSid = null;
 
@@ -147,14 +156,16 @@ router.ws('/stream/:callSid', (ws, req) => {
         }
     });
 
-    ws.on('close', async () => {
-        console.log(`[WebRTC-Signaling] WebSocket uzavřen pro ${callSid}`);
+    ws.on('close', async (code, reason) => {
+        console.log(`[WebRTC-Signaling] WebSocket uzavřen pro ${callSid}, code: ${code}, reason: ${reason}`);
         await cleanupConnection(callSid);
     });
 
     ws.on('error', (error) => {
-        console.error('[WebRTC-Signaling] WebSocket chyba:', error);
+        console.error(`[WebRTC-Signaling] WebSocket chyba pro ${callSid}:`, error);
     });
+    
+    console.log(`[WebRTC-Signaling] WebSocket event handlers nastaveny pro ${callSid}`);
 });
 
 /**

@@ -5086,3 +5086,215 @@ async def get_course_lessons(course_id: int):
         return JSONResponse(status_code=500, content={"error": "Internal server error"})
     finally:
         session.close()
+
+from app.services.webrtc_realtime_service import WebRTCRealtimeService, TwilioWebRTCHandler
+
+@app.post("/voice/webrtc")
+async def voice_webrtc_handler(request: Request):
+    """Handler pro Twilio Voice webhook s WebRTC podporou"""
+    logger.info("Přijat Twilio webhook na /voice/webrtc - WebRTC verze")
+    
+    # Získáme form data z Twilio
+    form_data = await request.form()
+    
+    # Logování důležitých informací
+    from_number = form_data.get('From', 'Unknown')
+    to_number = form_data.get('To', 'Unknown') 
+    call_sid = form_data.get('CallSid', 'Unknown')
+    
+    logger.info(f"WebRTC Call SID: {call_sid}")
+    logger.info(f"WebRTC From: {from_number} -> To: {to_number}")
+    
+    # Zkusíme získat attempt_id z query parametrů
+    attempt_id = request.query_params.get('attempt_id')
+    logger.info(f"WebRTC Attempt ID: {attempt_id}")
+    
+    # Vytvoříme TwiML odpověď pro WebRTC
+    twiml_response = f'''<?xml version="1.0" encoding="UTF-8"?>
+<Response>
+    <Say language="cs-CZ" rate="0.9" voice="Google.cs-CZ-Standard-A">Připojuji vás k AI asistentovi přes WebRTC technologii.</Say>
+    <Connect>
+        <Stream 
+            name="webrtc_ai_stream"
+            url="wss://lecture-app-production.up.railway.app/webrtc-audio" 
+            track="both_tracks" 
+            statusCallback="https://lecture-app-production.up.railway.app/webrtc-callback"
+            statusCallbackMethod="POST"
+        />
+    </Connect>
+    <Pause length="3600"/>
+</Response>'''
+    
+    logger.info(f"WebRTC TwiML odpověď z /voice/webrtc: {twiml_response}")
+    
+    return Response(
+        content=twiml_response,
+        media_type="application/xml"
+    )
+
+@app.post("/webrtc-callback")
+async def webrtc_callback(request: Request):
+    """Callback endpoint pro WebRTC stream status"""
+    logger.info("Přijat WebRTC callback")
+    
+    form_data = await request.form()
+    
+    # Logování callback informací
+    stream_sid = form_data.get('StreamSid', 'Unknown')
+    status = form_data.get('StreamStatus', 'Unknown')
+    call_sid = form_data.get('CallSid', 'Unknown')
+    
+    logger.info(f"WebRTC Stream SID: {stream_sid}")
+    logger.info(f"WebRTC Status: {status}")
+    logger.info(f"WebRTC Call SID: {call_sid}")
+    
+    return {"status": "ok"}
+
+@app.websocket("/webrtc-audio")
+async def webrtc_audio_stream(websocket: WebSocket):
+    """WebSocket endpoint pro WebRTC audio stream s OpenAI Realtime API"""
+    
+    print("🚀 === WEBRTC AUDIO_STREAM FUNKCE SPUŠTĚNA! ===")
+    print(f"🔗 WebSocket client: {websocket.client}")
+    print(f"📋 WebSocket headers: {dict(websocket.headers)}")
+    
+    logger.info("🚀 === WEBRTC AUDIO_STREAM FUNKCE SPUŠTĚNA! ===")
+    logger.info(f"🔗 WebSocket client: {websocket.client}")
+    logger.info(f"📋 WebSocket headers: {dict(websocket.headers)}")
+    
+    # KRITICKÉ: Musíme nejprve přijmout WebSocket připojení
+    try:
+        await websocket.accept()
+        print("✅ DEBUG: WebRTC WebSocket connection accepted.")
+        logger.info("✅ DEBUG: WebRTC WebSocket connection accepted.")
+    except Exception as accept_error:
+        print(f"❌ CHYBA při webrtc websocket.accept(): {accept_error}")
+        logger.error(f"❌ CHYBA při webrtc websocket.accept(): {accept_error}")
+        return
+        
+    # Inicializace WebRTC služby
+    webrtc_service = WebRTCRealtimeService()
+    
+    try:
+        logger.info("=== WEBRTC WEBSOCKET HANDLER SPUŠTĚN ===")
+        
+        # Připojení k OpenAI Realtime API
+        await webrtc_service.connect_to_openai("Jsi AI asistent pro výuku jazyků. Komunikuj pouze v češtině.")
+        
+        # Inicializace proměnných
+        stream_sid = None
+        websocket_active = True
+        
+        # Callback funkce pro odesílání audio odpovědí
+        async def audio_callback(audio_bytes):
+            if websocket.client_state == websockets.State.OPEN and stream_sid:
+                try:
+                    # Konverze audio do formátu pro Twilio
+                    audio_b64 = base64.b64encode(audio_bytes).decode('utf-8')
+                    
+                    audio_message = {
+                        "event": "media",
+                        "streamSid": stream_sid,
+                        "media": {
+                            "payload": audio_b64
+                        }
+                    }
+                    await websocket.send_text(json.dumps(audio_message))
+                    logger.debug("WebRTC audio odpověď odeslána do Twilio")
+                except Exception as e:
+                    logger.error(f"Chyba při odesílání WebRTC audio: {e}")
+        
+        # Spuštění zpracování OpenAI odpovědí v background tasku
+        openai_task = asyncio.create_task(
+            webrtc_service.handle_openai_response(audio_callback)
+        )
+        
+        # Hlavní smyčka pro zpracování WebSocket zpráv z Twilio
+        while websocket_active:
+            try:
+                logger.info("🔄 DEBUG: WebRTC čekám na WebSocket data...")
+                
+                # Kontrola stavu WebSocket před čtením
+                try:
+                    await websocket.ping()
+                    logger.info("✅ DEBUG: WebRTC WebSocket ping OK")
+                except Exception as ping_error:
+                    logger.info(f"❌ DEBUG: WebRTC WebSocket ping failed: {ping_error}")
+                    websocket_active = False
+                    break
+                
+                logger.info("📥 DEBUG: WebRTC volám websocket.receive_text()...")
+                data = await websocket.receive_text()
+                logger.info(f"📨 DEBUG: WebRTC přijata data ({len(data)} znaků): {data[:200]}...")
+                
+                try:
+                    msg = json.loads(data)
+                    logger.info(f"✅ DEBUG: WebRTC JSON parsování OK")
+                    event = msg.get("event", "unknown")
+                    logger.info(f"🎯 DEBUG: WebRTC Event typ: '{event}'")
+                except json.JSONDecodeError as json_error:
+                    logger.error(f"❌ DEBUG: WebRTC JSON parsing CHYBA: {json_error}")
+                    continue
+                
+                if event == "start":
+                    logger.info("=== WEBRTC MEDIA STREAM START EVENT PŘIJAT! ===")
+                    stream_sid = msg.get("streamSid")
+                    logger.info(f"WebRTC Stream SID: {stream_sid}")
+                    
+                    # Odeslání úvodní zprávy
+                    welcome_message = "Ahoj! Jsem AI asistent připojený přes WebRTC. Jak vám mohu pomoci?"
+                    await send_tts_to_twilio(websocket, welcome_message, stream_sid, None)
+                    
+                elif event == "media":
+                    logger.info(f"🎵 WEBRTC MEDIA EVENT PŘIJAT! Track: {msg['media'].get('track', 'unknown')}")
+                    payload = msg["media"]["payload"]
+                    track = msg["media"]["track"]
+                    
+                    if track == "inbound":
+                        logger.info("📥 WEBRTC INBOUND TRACK - zpracovávám audio data")
+                        # Dekódování audio dat
+                        audio_data = base64.b64decode(payload)
+                        
+                        # Odeslání do WebRTC služby (která to přepošle do OpenAI)
+                        if webrtc_service.is_connected and webrtc_service.openai_ws:
+                            audio_message = {
+                                "type": "input_audio_buffer.append",
+                                "audio": payload  # Použijeme původní base64 data
+                            }
+                            await webrtc_service.openai_ws.send(json.dumps(audio_message))
+                            logger.debug("WebRTC audio odesláno do OpenAI")
+                    else:
+                        logger.info(f"📤 WEBRTC OUTBOUND TRACK - ignoruji (track: {track})")
+                    
+                elif event == "stop":
+                    logger.info("🛑 WebRTC Media Stream ukončen - Twilio poslal stop event")
+                    websocket_active = False
+                    break
+                    
+            except Exception as e:
+                error_msg = str(e)
+                logger.error(f"DEBUG: WebRTC Chyba při zpracování zprávy: {error_msg}")
+                
+                if any(keyword in error_msg.lower() for keyword in [
+                    "websocket", "disconnect", "connection", "closed", "broken pipe"
+                ]):
+                    logger.info("DEBUG: WebRTC Detekováno WebSocket odpojení")
+                    websocket_active = False
+                    break
+                    
+                continue
+                    
+    except Exception as e:
+        logger.error(f"Chyba v WebRTC handleru: {e}")
+        import traceback
+        logger.error(f"WebRTC Traceback: {traceback.format_exc()}")
+    finally:
+        # Vyčištění WebRTC služby
+        if 'webrtc_service' in locals():
+            await webrtc_service.disconnect()
+        
+        # Ukončení OpenAI tasku
+        if 'openai_task' in locals() and not openai_task.done():
+            openai_task.cancel()
+        
+        logger.info("=== WEBRTC WEBSOCKET HANDLER UKONČEN ===")

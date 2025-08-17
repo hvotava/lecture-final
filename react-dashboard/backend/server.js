@@ -52,16 +52,23 @@ app.use(express.static(path.join(__dirname, '..', 'frontend', 'build')));
 // Database connection
 const { sequelize, User, Company } = require('./models');
 
+// Import routes
+const authRoutes = require('./routes/auth');
+const userRoutes = require('./routes/users');
+const twilioRoutes = require('./routes/twilio');
+const webrtcRoutes = require('./routes/twilio-webrtc');
+
 // Routes
-app.use('/api/auth', require('./routes/auth'));
-app.use('/api/users', require('./routes/users'));
+app.use('/api/auth', authRoutes);
+app.use('/api/users', userRoutes);
 app.use('/api/users-management', require('./routes/users-management'));
 app.use('/api/companies', require('./routes/companies'));
 app.use('/api/trainings', require('./routes/trainings'));
 app.use('/api/lessons', require('./routes/lessons'));
 app.use('/api/tests', require('./routes/tests'));
 app.use('/api/dashboard', require('./routes/dashboard'));
-app.use('/api/twilio', require('./routes/twilio'));
+app.use('/api/twilio', twilioRoutes);
+app.use('/api/twilio/webrtc', webrtcRoutes);
 app.use('/api/content', require('./routes/content'));
 app.use('/api/ai-proxy', require('./routes/ai-proxy'));
 app.use('/api/analytics', require('./routes/analytics'));

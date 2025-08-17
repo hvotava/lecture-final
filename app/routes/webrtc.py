@@ -13,7 +13,7 @@ webrtc_bp = Blueprint('webrtc', __name__, url_prefix='/webrtc')
 webrtc_handlers = {}
 
 @webrtc_bp.route('/voice/incoming', methods=['POST'])
-async def handle_webrtc_incoming_call():
+def handle_webrtc_incoming_call():
     """Zpracuje příchozí WebRTC hovor z Twilio."""
     try:
         # Získání parametrů z Twilio
@@ -31,26 +31,35 @@ async def handle_webrtc_incoming_call():
             if attempt and attempt.lesson:
                 lesson_context = f"Lekce: {attempt.lesson.title}. Obsah: {attempt.lesson.content[:500]}"
         
+        # WEBRTC HANDLER - synchronní inicializace
+        logger.info(f"WebRTC: Inicializace pro {call_sid}")
+        
+        # Načteme lekci data pro uživatele
+        user = User.query.filter_by(phone=to_number.replace('+', '')).first()
+        lesson_title = "NOVAMET 881"  # Default
+        if user:
+            logger.info(f"User nalezen: {user.name} pro telefon {to_number}")
+        
         # Vytvoření WebRTC handleru
         handler = TwilioWebRTCHandler()
         webrtc_handlers[call_sid] = handler
         
-        # Konfigurace WebRTC hovoru
-        config = await handler.handle_twilio_webrtc_call({
+        # Synchronní konfigurace
+        config = {
+            'status': 'success',
             'call_sid': call_sid,
-            'from': from_number,
-            'to': to_number
-        }, lesson_context)
+            'lesson_context': lesson_title
+        }
         
         if config['status'] == 'success':
-            # TwiML odpověď pro WebRTC
+            # TwiML odpověď pro WebRTC s Media Stream
             twiml_response = f'''<?xml version="1.0" encoding="UTF-8"?>
 <Response>
-    <Say language="cs-CZ" voice="Google.cs-CZ-Standard-A">Připojuji vás k AI asistentovi přes WebRTC.</Say>
+    <Say language="cs-CZ" voice="Google.cs-CZ-Standard-A">Zahajuji interaktivní lekci {lesson_title}.</Say>
     <Connect>
         <Stream 
-            name="webrtc_stream"
-            url="wss://{request.host}/webrtc/stream/{call_sid}"
+            name="webrtc_realtime_stream"
+            url="wss://{request.host}/webrtc-audio"
             track="both_tracks"
         />
     </Connect>

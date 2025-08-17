@@ -32,7 +32,9 @@ const WebRTCPhone: React.FC<WebRTCPhoneProps> = ({
   const peerConnection = useRef<RTCPeerConnection | null>(null);
   const localStream = useRef<MediaStream | null>(null);
   const remoteAudio = useRef<HTMLAudioElement | null>(null);
+  const signalingWs = useRef<WebSocket | null>(null);
   const durationInterval = useRef<NodeJS.Timeout | null>(null);
+  const clientId = useRef<string>(Math.random().toString(36).substr(2, 9));
 
   // WebRTC konfigurace
   const rtcConfig: RTCConfiguration = {
@@ -78,11 +80,81 @@ const WebRTCPhone: React.FC<WebRTCPhoneProps> = ({
     return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   };
 
+  const initializeSignaling = async (): Promise<void> => {
+    try {
+      const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+      const wsUrl = `${wsProtocol}//${window.location.host}/api/twilio/webrtc/signaling/${clientId.current}`;
+      
+      signalingWs.current = new WebSocket(wsUrl);
+
+      signalingWs.current.onopen = () => {
+        console.log('[WebRTC-Browser] Signaling WebSocket připojen');
+      };
+
+      signalingWs.current.onmessage = async (event) => {
+        try {
+          const data = JSON.parse(event.data);
+          console.log('[WebRTC-Browser] Signaling zpráva:', data.type);
+
+          switch (data.type) {
+            case 'call_started':
+              console.log('[WebRTC-Browser] Hovor zahájen na serveru');
+              break;
+              
+            case 'call_ended':
+              console.log('[WebRTC-Browser] Hovor ukončen na serveru');
+              setCallState(prev => ({ ...prev, status: 'disconnected' }));
+              break;
+              
+            case 'audio_data':
+              // Zpracování audio dat ze serveru
+              handleServerAudio(data);
+              break;
+              
+            case 'webrtc_offer':
+              // Zpracování WebRTC offer
+              await handleWebRTCOffer(data);
+              break;
+              
+            case 'webrtc_answer':
+              // Zpracování WebRTC answer
+              await handleWebRTCAnswer(data);
+              break;
+              
+            case 'ice_candidate':
+              // Zpracování ICE candidate
+              await handleICECandidate(data);
+              break;
+          }
+        } catch (error) {
+          console.error('[WebRTC-Browser] Chyba při zpracování signaling zprávy:', error);
+        }
+      };
+
+      signalingWs.current.onclose = () => {
+        console.log('[WebRTC-Browser] Signaling WebSocket uzavřen');
+      };
+
+      signalingWs.current.onerror = (error) => {
+        console.error('[WebRTC-Browser] Signaling WebSocket chyba:', error);
+        onError?.('Chyba při připojení k signaling serveru');
+      };
+
+    } catch (error) {
+      console.error('[WebRTC-Browser] Chyba při inicializaci signaling:', error);
+      onError?.('Nepodařilo se připojit k signaling serveru');
+    }
+  };
+
   const initializeWebRTC = async (): Promise<void> => {
     try {
       // Získání přístupu k mikrofonu
       localStream.current = await navigator.mediaDevices.getUserMedia({
-        audio: true,
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true
+        },
         video: false
       });
 
@@ -98,7 +170,7 @@ const WebRTCPhone: React.FC<WebRTCPhoneProps> = ({
 
       // Zpracování remote stream
       peerConnection.current.ontrack = (event) => {
-        console.log('Přijat remote track:', event.track.kind);
+        console.log('[WebRTC-Browser] Přijat remote track:', event.track.kind);
         if (event.track.kind === 'audio' && remoteAudio.current) {
           const remoteStream = new MediaStream([event.track]);
           remoteAudio.current.srcObject = remoteStream;
@@ -108,16 +180,19 @@ const WebRTCPhone: React.FC<WebRTCPhoneProps> = ({
 
       // ICE candidate handling
       peerConnection.current.onicecandidate = (event) => {
-        if (event.candidate) {
-          console.log('Nový ICE candidate:', event.candidate);
-          sendIceCandidate(event.candidate);
+        if (event.candidate && signalingWs.current?.readyState === WebSocket.OPEN) {
+          console.log('[WebRTC-Browser] Odesílám ICE candidate');
+          signalingWs.current.send(JSON.stringify({
+            type: 'ice_candidate',
+            candidate: event.candidate
+          }));
         }
       };
 
       // Connection state changes
       peerConnection.current.onconnectionstatechange = () => {
         if (peerConnection.current) {
-          console.log('WebRTC connection state:', peerConnection.current.connectionState);
+          console.log('[WebRTC-Browser] Connection state:', peerConnection.current.connectionState);
           
           switch (peerConnection.current.connectionState) {
             case 'connected':
@@ -133,7 +208,7 @@ const WebRTCPhone: React.FC<WebRTCPhoneProps> = ({
       };
 
     } catch (error) {
-      console.error('Chyba při inicializaci WebRTC:', error);
+      console.error('[WebRTC-Browser] Chyba při inicializaci WebRTC:', error);
       setCallState(prev => ({
         ...prev,
         status: 'error',
@@ -143,57 +218,104 @@ const WebRTCPhone: React.FC<WebRTCPhoneProps> = ({
     }
   };
 
+  const handleServerAudio = (audioData: any): void => {
+    // Zpracování audio dat ze serveru (Twilio nebo OpenAI)
+    console.log('[WebRTC-Browser] Audio data ze serveru:', audioData.dataType);
+    
+    // Zde by byla implementace pro zpracování audio dat
+    // V reálné implementaci by se audio data přehrála nebo zpracovala
+  };
+
+  const handleWebRTCOffer = async (offerData: any): Promise<void> => {
+    if (!peerConnection.current) return;
+    
+    try {
+      await peerConnection.current.setRemoteDescription(offerData.offer);
+      const answer = await peerConnection.current.createAnswer();
+      await peerConnection.current.setLocalDescription(answer);
+      
+      if (signalingWs.current?.readyState === WebSocket.OPEN) {
+        signalingWs.current.send(JSON.stringify({
+          type: 'webrtc_answer',
+          answer: answer
+        }));
+      }
+    } catch (error) {
+      console.error('[WebRTC-Browser] Chyba při zpracování offer:', error);
+    }
+  };
+
+  const handleWebRTCAnswer = async (answerData: any): Promise<void> => {
+    if (!peerConnection.current) return;
+    
+    try {
+      await peerConnection.current.setRemoteDescription(answerData.answer);
+    } catch (error) {
+      console.error('[WebRTC-Browser] Chyba při zpracování answer:', error);
+    }
+  };
+
+  const handleICECandidate = async (candidateData: any): Promise<void> => {
+    if (!peerConnection.current) return;
+    
+    try {
+      await peerConnection.current.addIceCandidate(candidateData.candidate);
+    } catch (error) {
+      console.error('[WebRTC-Browser] Chyba při přidávání ICE candidate:', error);
+    }
+  };
+
   const startCall = async (): Promise<void> => {
     try {
       setCallState(prev => ({ ...prev, status: 'connecting' }));
 
+      // Inicializace signaling
+      await initializeSignaling();
+      
+      // Čekání na připojení signaling WebSocket
+      await new Promise((resolve) => {
+        const checkConnection = () => {
+          if (signalingWs.current?.readyState === WebSocket.OPEN) {
+            resolve(true);
+          } else {
+            setTimeout(checkConnection, 100);
+          }
+        };
+        checkConnection();
+      });
+
+      // Inicializace WebRTC
       await initializeWebRTC();
 
       if (!peerConnection.current) {
         throw new Error('Peer connection není inicializováno');
       }
 
-      // Vytvoření offer
+      // Vytvoření offer pro WebRTC spojení
       const offer = await peerConnection.current.createOffer({
         offerToReceiveAudio: true
       });
 
       await peerConnection.current.setLocalDescription(offer);
 
-      // Odeslání offer na server
-      const response = await fetch('/api/twilio/webrtc/offer', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          userId: userId,
-          offer: {
-            type: offer.type,
-            sdp: offer.sdp
-          }
-        })
-      });
-
-      if (!response.ok) {
-        throw new Error('Chyba při vytváření hovoru');
-      }
-
-      const data = await response.json();
-      
-      if (data.status === 'success') {
-        setCallState(prev => ({
-          ...prev,
-          callId: data.callId,
-          status: 'connecting'
+      // Odeslání offer přes signaling
+      if (signalingWs.current?.readyState === WebSocket.OPEN) {
+        signalingWs.current.send(JSON.stringify({
+          type: 'webrtc_offer',
+          offer: offer
         }));
-        onCallStart?.(data.callId);
-      } else {
-        throw new Error(data.message || 'Chyba při vytváření hovoru');
       }
+
+      const callId = `webrtc-${Date.now()}`;
+      setCallState(prev => ({
+        ...prev,
+        callId: callId,
+        status: 'connecting'
+      }));
+      onCallStart?.(callId);
 
     } catch (error) {
-      console.error('Chyba při zahájení hovoru:', error);
+      console.error('[WebRTC-Browser] Chyba při zahájení hovoru:', error);
       setCallState(prev => ({
         ...prev,
         status: 'error',
@@ -206,18 +328,13 @@ const WebRTCPhone: React.FC<WebRTCPhoneProps> = ({
   const hangUp = async (): Promise<void> => {
     try {
       if (callState.callId) {
-        // Oznámení serveru o ukončení hovoru
-        await fetch('/api/twilio/webrtc/hangup', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            callId: callState.callId
-          })
-        });
-
         onCallEnd?.(callState.callId);
+      }
+
+      // Uzavření signaling WebSocket
+      if (signalingWs.current) {
+        signalingWs.current.close();
+        signalingWs.current = null;
       }
 
       // Uzavření peer connection
@@ -242,30 +359,7 @@ const WebRTCPhone: React.FC<WebRTCPhoneProps> = ({
       setIsSpeakerOn(true);
 
     } catch (error) {
-      console.error('Chyba při ukončování hovoru:', error);
-    }
-  };
-
-  const sendIceCandidate = async (candidate: RTCIceCandidate): Promise<void> => {
-    if (!callState.callId) return;
-
-    try {
-      await fetch('/api/twilio/webrtc/ice-candidate', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          callId: callState.callId,
-          candidate: {
-            candidate: candidate.candidate,
-            sdpMid: candidate.sdpMid,
-            sdpMLineIndex: candidate.sdpMLineIndex
-          }
-        })
-      });
-    } catch (error) {
-      console.error('Chyba při odesílání ICE candidate:', error);
+      console.error('[WebRTC-Browser] Chyba při ukončování hovoru:', error);
     }
   };
 
@@ -368,10 +462,16 @@ const WebRTCPhone: React.FC<WebRTCPhoneProps> = ({
 
         <div className="text-center text-muted">
           <small>
-            {callState.status === 'idle' && 'Klikněte na tlačítko pro zahájení hovoru s AI asistentem'}
-            {callState.status === 'connecting' && 'Připojuji k AI asistentovi...'}
-            {callState.status === 'connected' && 'Mluvte s AI asistentem přes WebRTC'}
-            {callState.status === 'disconnected' && 'Hovor byl ukončen'}
+            {callState.status === 'idle' && 'Klikněte na tlačítko pro zahájení WebRTC hovoru s AI asistentem'}
+            {callState.status === 'connecting' && 'Připojuji k AI asistentovi přes WebRTC...'}
+            {callState.status === 'connected' && 'WebRTC hovor s AI asistentem aktivní'}
+            {callState.status === 'disconnected' && 'WebRTC hovor byl ukončen'}
+          </small>
+        </div>
+
+        <div className="mt-3">
+          <small className="text-muted">
+            Client ID: {clientId.current}
           </small>
         </div>
       </Card.Body>

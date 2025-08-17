@@ -1,85 +1,75 @@
 const express = require('express');
 const router = express.Router();
 const twilio = require('twilio');
-
-// WebRTC konfigurace
 const WebSocket = require('ws');
-const { RTCPeerConnection, RTCSessionDescription, RTCIceCandidate } = require('wrtc');
 
-// Aktivní WebRTC spojení
+// Aktivní WebRTC signaling connections
 const activeConnections = new Map();
+const signalingClients = new Map(); // Pro browser WebRTC clients
 
 // Middleware pro logování
 router.use((req, res, next) => {
-    console.log(`[WebRTC] ${req.method} ${req.path}`, req.body);
+    console.log(`[WebRTC-Signaling] ${req.method} ${req.path}`, req.body);
     next();
 });
 
 /**
- * Endpoint pro příchozí Twilio WebRTC hovory
+ * Endpoint pro příchozí Twilio WebRTC hovory s browser signaling
  */
 router.post('/voice/incoming', async (req, res) => {
     try {
         const { CallSid, From, To } = req.body;
         const attemptId = req.query.attempt_id;
 
-        console.log(`[WebRTC] Příchozí hovor: ${CallSid} z ${From} na ${To}`);
+        console.log(`[WebRTC-Signaling] Příchozí hovor: ${CallSid} z ${From} na ${To}`);
 
-        // Vytvoření TwiML odpovědi pro WebRTC
+        // Vytvoření TwiML odpovědi pro WebRTC s browser signaling
         const twiml = new twilio.twiml.VoiceResponse();
         
         twiml.say({
             language: 'cs-CZ',
             voice: 'Google.cs-CZ-Standard-A'
-        }, 'Připojuji vás k AI asistentovi přes WebRTC technologii.');
+        }, 'Připojuji vás k AI asistentovi přes WebRTC s browser signaling.');
 
-        // Připojení k WebRTC stream
+        // Připojení k WebSocket stream pro signaling
         const connect = twiml.connect();
         connect.stream({
-            name: 'webrtc_audio_stream',
+            name: 'webrtc_signaling_stream',
             url: `wss://${req.get('host')}/api/twilio/webrtc/stream/${CallSid}`,
             track: 'both_tracks'
         });
 
-        // Vytvoření WebRTC peer connection
-        const peerConnection = new RTCPeerConnection({
-            iceServers: [
-                { urls: 'stun:stun.l.google.com:19302' },
-                { urls: 'stun:stun1.l.google.com:19302' }
-            ]
-        });
-
-        // Uložení spojení
+        // Uložení spojení info
         activeConnections.set(CallSid, {
-            peerConnection,
             callSid: CallSid,
             from: From,
             to: To,
             attemptId,
-            createdAt: new Date()
+            createdAt: new Date(),
+            status: 'initiated'
         });
 
-        console.log(`[WebRTC] Vytvořeno peer connection pro ${CallSid}`);
+        console.log(`[WebRTC-Signaling] Signaling connection info uloženo pro ${CallSid}`);
 
         res.type('text/xml');
         res.send(twiml.toString());
 
     } catch (error) {
-        console.error('[WebRTC] Chyba při zpracování příchozího hovoru:', error);
+        console.error('[WebRTC-Signaling] Chyba při zpracování příchozího hovoru:', error);
         res.status(500).send('Chyba serveru');
     }
 });
 
 /**
- * WebSocket endpoint pro Twilio Media Stream
+ * WebSocket endpoint pro Twilio Media Stream + WebRTC Signaling
  */
 router.ws('/stream/:callSid', (ws, req) => {
     const callSid = req.params.callSid;
-    console.log(`[WebRTC] WebSocket připojen pro ${callSid}`);
+    console.log(`[WebRTC-Signaling] WebSocket připojen pro ${callSid}`);
 
     const connection = activeConnections.get(callSid);
     if (!connection) {
-        console.error(`[WebRTC] Spojení nenalezeno pro ${callSid}`);
+        console.error(`[WebRTC-Signaling] Spojení nenalezeno pro ${callSid}`);
         ws.close();
         return;
     }
@@ -94,14 +84,19 @@ router.ws('/stream/:callSid', (ws, req) => {
             switch (data.event) {
                 case 'start':
                     streamSid = data.streamSid;
-                    console.log(`[WebRTC] Stream začal: ${streamSid}`);
+                    connection.streamSid = streamSid;
+                    connection.status = 'connected';
+                    console.log(`[WebRTC-Signaling] Stream začal: ${streamSid}`);
                     
                     // Inicializace OpenAI Realtime API připojení
                     await initializeOpenAIConnection(connection, ws);
+                    
+                    // Notifikace browser clients o novém hovoru
+                    notifyBrowserClients(callSid, 'call_started');
                     break;
 
                 case 'media':
-                    // Zpracování audio dat z Twilio
+                    // Zpracování audio dat z Twilio - přeposíláme do OpenAI
                     if (connection.openaiWs && connection.openaiWs.readyState === WebSocket.OPEN) {
                         const audioMessage = {
                             type: 'input_audio_buffer.append',
@@ -109,25 +104,84 @@ router.ws('/stream/:callSid', (ws, req) => {
                         };
                         connection.openaiWs.send(JSON.stringify(audioMessage));
                     }
+                    
+                    // Také přeposíláme do browser clients pro WebRTC
+                    forwardToBrowserClients(callSid, 'twilio_audio', data.media);
                     break;
 
                 case 'stop':
-                    console.log(`[WebRTC] Stream ukončen: ${streamSid}`);
+                    console.log(`[WebRTC-Signaling] Stream ukončen: ${streamSid}`);
+                    notifyBrowserClients(callSid, 'call_ended');
                     await cleanupConnection(callSid);
                     break;
             }
         } catch (error) {
-            console.error('[WebRTC] Chyba při zpracování WebSocket zprávy:', error);
+            console.error('[WebRTC-Signaling] Chyba při zpracování WebSocket zprávy:', error);
         }
     });
 
     ws.on('close', async () => {
-        console.log(`[WebRTC] WebSocket uzavřen pro ${callSid}`);
+        console.log(`[WebRTC-Signaling] WebSocket uzavřen pro ${callSid}`);
         await cleanupConnection(callSid);
     });
 
     ws.on('error', (error) => {
-        console.error('[WebRTC] WebSocket chyba:', error);
+        console.error('[WebRTC-Signaling] WebSocket chyba:', error);
+    });
+});
+
+/**
+ * WebSocket endpoint pro browser WebRTC signaling
+ */
+router.ws('/signaling/:clientId', (ws, req) => {
+    const clientId = req.params.clientId;
+    console.log(`[WebRTC-Signaling] Browser client připojen: ${clientId}`);
+
+    // Uložení browser client
+    signalingClients.set(clientId, {
+        ws: ws,
+        clientId: clientId,
+        connectedAt: new Date()
+    });
+
+    ws.on('message', (message) => {
+        try {
+            const data = JSON.parse(message);
+            console.log(`[WebRTC-Signaling] Zpráva od browser client ${clientId}:`, data.type);
+
+            switch (data.type) {
+                case 'webrtc_offer':
+                    // Přeposlání WebRTC offer
+                    handleWebRTCSignaling(clientId, data);
+                    break;
+                    
+                case 'webrtc_answer':
+                    // Přeposlání WebRTC answer
+                    handleWebRTCSignaling(clientId, data);
+                    break;
+                    
+                case 'ice_candidate':
+                    // Přeposlání ICE candidate
+                    handleWebRTCSignaling(clientId, data);
+                    break;
+                    
+                case 'browser_audio':
+                    // Audio z browser WebRTC - přeposlání do Twilio
+                    forwardBrowserAudioToTwilio(data);
+                    break;
+            }
+        } catch (error) {
+            console.error('[WebRTC-Signaling] Chyba při zpracování browser zprávy:', error);
+        }
+    });
+
+    ws.on('close', () => {
+        console.log(`[WebRTC-Signaling] Browser client odpojeno: ${clientId}`);
+        signalingClients.delete(clientId);
+    });
+
+    ws.on('error', (error) => {
+        console.error('[WebRTC-Signaling] Browser client chyba:', error);
     });
 });
 
@@ -136,8 +190,6 @@ router.ws('/stream/:callSid', (ws, req) => {
  */
 async function initializeOpenAIConnection(connection, twilioWs) {
     try {
-        const WebSocket = require('ws');
-        
         const openaiWs = new WebSocket('wss://api.openai.com/v1/realtime?model=gpt-4o-realtime-preview-2024-10-01', {
             headers: {
                 'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`,
@@ -148,7 +200,7 @@ async function initializeOpenAIConnection(connection, twilioWs) {
         connection.openaiWs = openaiWs;
 
         openaiWs.on('open', () => {
-            console.log('[WebRTC] OpenAI WebSocket připojen');
+            console.log('[WebRTC-Signaling] OpenAI WebSocket připojen');
             
             // Konfigurace session
             const sessionConfig = {
@@ -193,10 +245,15 @@ async function initializeOpenAIConnection(connection, twilioWs) {
                             };
                             twilioWs.send(JSON.stringify(audioMessage));
                         }
+                        
+                        // Také odeslání do browser clients
+                        forwardToBrowserClients(connection.callSid, 'openai_audio', {
+                            payload: message.delta
+                        });
                         break;
 
                     case 'input_audio_buffer.speech_started':
-                        console.log('[WebRTC] Detekována řeč uživatele');
+                        console.log('[WebRTC-Signaling] Detekována řeč uživatele');
                         // Přerušení současné AI odpovědi
                         if (twilioWs.readyState === WebSocket.OPEN) {
                             twilioWs.send(JSON.stringify({
@@ -208,110 +265,93 @@ async function initializeOpenAIConnection(connection, twilioWs) {
 
                     case 'conversation.item.input_audio_transcription.completed':
                         if (message.transcript) {
-                            console.log(`[WebRTC] Transkripce: ${message.transcript}`);
+                            console.log(`[WebRTC-Signaling] Transkripce: ${message.transcript}`);
                         }
                         break;
 
                     case 'error':
-                        console.error('[WebRTC] OpenAI chyba:', message);
+                        console.error('[WebRTC-Signaling] OpenAI chyba:', message);
                         break;
                 }
             } catch (error) {
-                console.error('[WebRTC] Chyba při zpracování OpenAI zprávy:', error);
+                console.error('[WebRTC-Signaling] Chyba při zpracování OpenAI zprávy:', error);
             }
         });
 
         openaiWs.on('error', (error) => {
-            console.error('[WebRTC] OpenAI WebSocket chyba:', error);
+            console.error('[WebRTC-Signaling] OpenAI WebSocket chyba:', error);
         });
 
         openaiWs.on('close', () => {
-            console.log('[WebRTC] OpenAI WebSocket uzavřen');
+            console.log('[WebRTC-Signaling] OpenAI WebSocket uzavřen');
         });
 
     } catch (error) {
-        console.error('[WebRTC] Chyba při inicializaci OpenAI připojení:', error);
+        console.error('[WebRTC-Signaling] Chyba při inicializaci OpenAI připojení:', error);
     }
 }
 
 /**
- * Vytvoření WebRTC offer
+ * Notifikace browser clients
  */
-router.post('/offer', async (req, res) => {
-    try {
-        const { callSid } = req.body;
-        const connection = activeConnections.get(callSid);
-
-        if (!connection) {
-            return res.status(404).json({ error: 'Spojení nenalezeno' });
+function notifyBrowserClients(callSid, eventType, data = {}) {
+    const message = {
+        type: eventType,
+        callSid: callSid,
+        data: data
+    };
+    
+    for (const [clientId, client] of signalingClients.entries()) {
+        if (client.ws.readyState === WebSocket.OPEN) {
+            client.ws.send(JSON.stringify(message));
         }
-
-        const offer = await connection.peerConnection.createOffer();
-        await connection.peerConnection.setLocalDescription(offer);
-
-        res.json({
-            status: 'success',
-            offer: {
-                type: offer.type,
-                sdp: offer.sdp
-            }
-        });
-
-    } catch (error) {
-        console.error('[WebRTC] Chyba při vytváření offer:', error);
-        res.status(500).json({ error: 'Chyba při vytváření offer' });
     }
-});
+}
 
 /**
- * Zpracování WebRTC answer
+ * Přeposlání dat do browser clients
  */
-router.post('/answer', async (req, res) => {
-    try {
-        const { callSid, answer } = req.body;
-        const connection = activeConnections.get(callSid);
-
-        if (!connection) {
-            return res.status(404).json({ error: 'Spojení nenalezeno' });
+function forwardToBrowserClients(callSid, dataType, payload) {
+    const message = {
+        type: 'audio_data',
+        callSid: callSid,
+        dataType: dataType,
+        payload: payload
+    };
+    
+    for (const [clientId, client] of signalingClients.entries()) {
+        if (client.ws.readyState === WebSocket.OPEN) {
+            client.ws.send(JSON.stringify(message));
         }
-
-        const answerDescription = new RTCSessionDescription(answer);
-        await connection.peerConnection.setRemoteDescription(answerDescription);
-
-        res.json({ status: 'success' });
-
-    } catch (error) {
-        console.error('[WebRTC] Chyba při zpracování answer:', error);
-        res.status(500).json({ error: 'Chyba při zpracování answer' });
     }
-});
+}
 
 /**
- * Přidání ICE candidate
+ * Zpracování WebRTC signaling zpráv
  */
-router.post('/ice-candidate', async (req, res) => {
-    try {
-        const { callSid, candidate } = req.body;
-        const connection = activeConnections.get(callSid);
-
-        if (!connection) {
-            return res.status(404).json({ error: 'Spojení nenalezeno' });
-        }
-
-        const iceCandidate = new RTCIceCandidate(candidate);
-        await connection.peerConnection.addIceCandidate(iceCandidate);
-
-        res.json({ status: 'success' });
-
-    } catch (error) {
-        console.error('[WebRTC] Chyba při přidávání ICE candidate:', error);
-        res.status(500).json({ error: 'Chyba při přidávání ICE candidate' });
-    }
-});
+function handleWebRTCSignaling(clientId, signalingData) {
+    console.log(`[WebRTC-Signaling] WebRTC signaling od ${clientId}:`, signalingData.type);
+    
+    // Zde by byla logika pro přeposlání signaling zpráv mezi clients
+    // Pro demo účely zatím jen logujeme
+    
+    // V reálné implementaci by se zde přeposílaly zprávy mezi peer connections
+}
 
 /**
- * Status endpoint
+ * Přeposlání browser audio do Twilio
  */
+function forwardBrowserAudioToTwilio(audioData) {
+    // Najít odpovídající Twilio connection a přeposlat audio
+    // Pro demo účely zatím jen logujeme
+    console.log('[WebRTC-Signaling] Audio z browser client přijato');
+}
+
+/**
+ * REST API endpointy pro WebRTC
+ */
+
+// Status endpoint
 router.get('/status/:callSid', (req, res) => {
     const { callSid } = req.params;
     const connection = activeConnections.get(callSid);
@@ -321,24 +361,22 @@ router.get('/status/:callSid', (req, res) => {
     }
 
     res.json({
-        status: 'active',
-        connectionState: connection.peerConnection.connectionState,
-        iceConnectionState: connection.peerConnection.iceConnectionState,
+        status: connection.status || 'unknown',
         callSid: callSid,
-        createdAt: connection.createdAt
+        createdAt: connection.createdAt,
+        streamSid: connection.streamSid,
+        connectedClients: signalingClients.size
     });
 });
 
-/**
- * Ukončení hovoru
- */
+// Ukončení hovoru
 router.post('/hangup', async (req, res) => {
     try {
         const { callSid } = req.body;
         await cleanupConnection(callSid);
         res.json({ status: 'success' });
     } catch (error) {
-        console.error('[WebRTC] Chyba při ukončování hovoru:', error);
+        console.error('[WebRTC-Signaling] Chyba při ukončování hovoru:', error);
         res.status(500).json({ error: 'Chyba při ukončování hovoru' });
     }
 });
@@ -356,29 +394,40 @@ async function cleanupConnection(callSid) {
             connection.openaiWs.close();
         }
 
-        // Uzavření WebRTC peer connection
-        if (connection.peerConnection) {
-            connection.peerConnection.close();
-        }
+        // Notifikace browser clients
+        notifyBrowserClients(callSid, 'connection_cleanup');
 
         // Odstranění z mapy
         activeConnections.delete(callSid);
 
-        console.log(`[WebRTC] Spojení vyčištěno pro ${callSid}`);
+        console.log(`[WebRTC-Signaling] Spojení vyčištěno pro ${callSid}`);
     } catch (error) {
-        console.error('[WebRTC] Chyba při čištění spojení:', error);
+        console.error('[WebRTC-Signaling] Chyba při čištění spojení:', error);
     }
 }
 
 // Periodické čištění starých spojení
 setInterval(() => {
     const now = new Date();
+    
+    // Čištění starých call connections
     for (const [callSid, connection] of activeConnections.entries()) {
         const age = now - connection.createdAt;
-        // Vyčistit spojení starší než 1 hodina
-        if (age > 60 * 60 * 1000) {
-            console.log(`[WebRTC] Čištění starého spojení: ${callSid}`);
+        if (age > 60 * 60 * 1000) { // 1 hodina
+            console.log(`[WebRTC-Signaling] Čištění starého spojení: ${callSid}`);
             cleanupConnection(callSid);
+        }
+    }
+    
+    // Čištění starých browser clients
+    for (const [clientId, client] of signalingClients.entries()) {
+        const age = now - client.connectedAt;
+        if (age > 2 * 60 * 60 * 1000) { // 2 hodiny
+            console.log(`[WebRTC-Signaling] Čištění starého browser clienta: ${clientId}`);
+            if (client.ws.readyState === WebSocket.OPEN) {
+                client.ws.close();
+            }
+            signalingClients.delete(clientId);
         }
     }
 }, 5 * 60 * 1000); // Každých 5 minut

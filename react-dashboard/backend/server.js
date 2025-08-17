@@ -8,46 +8,16 @@ const rateLimit = require('express-rate-limit');
 const fileUpload = require('express-fileupload');
 const path = require('path');
 const bcrypt = require('bcryptjs');
-const WebSocket = require('ws');
 require('dotenv').config();
 
 const app = express();
-// Enable WebSocket support for Railway
+// Enable WebSocket support for Railway - POUZE na hlavním portu!
 const server = require('http').createServer(app);
 const wsInstance = expressWs(app, server);
 const PORT = process.env.PORT || 5000;
-const WS_PORT = process.env.WS_PORT || (parseInt(PORT) + 1);
 
 // CRITICAL: Trust proxy for Railway deployment (fixes X-Forwarded-For error)
 app.set('trust proxy', 1);
-
-// Dedikovaný WebSocket server pro Twilio Media Stream
-const wsServer = new WebSocket.Server({ 
-    port: WS_PORT,
-    host: '0.0.0.0'
-});
-
-console.log(`🔌 Dedikovaný WebSocket server spuštěn na portu ${WS_PORT}`);
-
-// Import WebSocket handler
-const { handleTwilioWebSocket, router: twilioWebrtcRouter } = require('./routes/twilio-webrtc');
-
-wsServer.on('connection', (ws, req) => {
-    console.log(`[WebSocket-Dedicated] Nové WebSocket připojení z ${req.socket.remoteAddress}`);
-    
-    // Extrahuj CallSid z URL
-    const url = req.url;
-    const callSidMatch = url.match(/\/stream\/([^\/]+)/);
-    const callSid = callSidMatch ? callSidMatch[1] : null;
-    
-    if (callSid) {
-        console.log(`[WebSocket-Dedicated] CallSid extrahován: ${callSid}`);
-        handleTwilioWebSocket(ws, callSid);
-    } else {
-        console.error('[WebSocket-Dedicated] CallSid nenalezen v URL:', url);
-        ws.close();
-    }
-});
 
 // Security middleware
 app.use(helmet());
@@ -112,7 +82,7 @@ app.use('/api/lessons', require('./routes/lessons'));
 app.use('/api/tests', require('./routes/tests'));
 app.use('/api/dashboard', require('./routes/dashboard'));
 app.use('/api/twilio', twilioRoutes);
-app.use('/api/twilio/webrtc', twilioWebrtcRouter);
+app.use('/api/twilio/webrtc', require('./routes/twilio-webrtc').router);
 app.use('/api/content', require('./routes/content'));
 app.use('/api/ai-proxy', require('./routes/ai-proxy'));
 app.use('/api/analytics', require('./routes/analytics'));

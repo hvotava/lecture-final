@@ -27,6 +27,7 @@ import UserProgressAnalytics from './pages/UserProgressAnalytics';
 import QuestionManager from './pages/QuestionManager';
 import ReviewDashboard from './pages/ReviewDashboard';
 import TestResults from './pages/TestResults';
+import WebRTCDemo from './pages/WebRTCDemo';
 
 // Enhanced responsive theme
 const theme = createTheme({
@@ -317,6 +318,17 @@ function App() {
                 <ProtectedRoute>
                   <ResponsiveSidebar>
                     <TestResults />
+                  </ResponsiveSidebar>
+                </ProtectedRoute>
+              }
+            />
+            
+            <Route
+              path="/webrtc-demo"
+              element={
+                <ProtectedRoute>
+                  <ResponsiveSidebar>
+                    <WebRTCDemo />
                   </ResponsiveSidebar>
                 </ProtectedRoute>
               }

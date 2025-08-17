@@ -36,6 +36,7 @@ import {
   Insights as InsightsIcon,
   PersonSearch as PersonSearchIcon,
   Refresh as RefreshIcon,
+  Phone as PhoneIcon,
 } from '@mui/icons-material';
 import { useAuth } from '../contexts/AuthContext';
 import { canManageUsers, canManageCompanies, canManageTrainings, canViewAllData, getRoleDisplayName, getRoleColor } from '../utils/permissions';
@@ -104,7 +105,8 @@ const getMenuItems = (user: any) => {
   // Analytics jen pro admin
   if (user.role === 'admin') {
     items.push(
-      { text: 'User Progress', icon: <PersonSearchIcon />, path: '/user-progress', show: true }
+      { text: 'User Progress', icon: <PersonSearchIcon />, path: '/user-progress', show: true },
+      { text: 'WebRTC Demo', icon: <PhoneIcon />, path: '/webrtc-demo', show: true }
     );
   }
 

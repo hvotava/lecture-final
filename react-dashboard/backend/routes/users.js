@@ -384,9 +384,9 @@ router.post('/:id/call', auth, adminOnly, async (req, res) => {
         const call = await twilioClient.calls.create({
           to: user.phone,
           from: process.env.TWILIO_PHONE_NUMBER,
-          url: `${statusBackendUrl}/api/twilio/voice/call-intelligent`,
+          url: `${statusBackendUrl}/api/twilio/webrtc/voice/incoming`,
           method: 'POST',
-          record: true,
+          record: false, // WebRTC nepotřebuje record
           statusCallback: `${statusBackendUrl}/api/twilio/status`,
           statusCallbackEvent: ['initiated', 'ringing', 'answered', 'completed'],
           statusCallbackMethod: 'POST'

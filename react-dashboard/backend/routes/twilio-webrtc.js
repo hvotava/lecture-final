@@ -23,13 +23,40 @@ router.post('/voice/incoming', async (req, res) => {
 
         console.log(`[WebRTC-Signaling] Příchozí hovor: ${CallSid} z ${From} na ${To}`);
 
+        // Pokusit se načíst lesson data pro uživatele (pokud je hovor z admin dashboardu)
+        let lessonMessage = 'Připojuji vás k AI asistentovi přes WebRTC s real-time komunikací.';
+        
+        try {
+            // Import lesson selector
+            const { getLessonForUser } = require('./lesson-selector');
+            const lessonData = await getLessonForUser(To);
+            
+            if (lessonData && lessonData.message) {
+                lessonMessage = lessonData.message;
+                console.log(`[WebRTC-Signaling] Lesson data loaded for ${To}: ${lessonData.title}`);
+                
+                // Uložit lesson data do connection info
+                activeConnections.set(CallSid, {
+                    callSid: CallSid,
+                    from: From,
+                    to: To,
+                    attemptId,
+                    lessonData: lessonData,
+                    createdAt: new Date(),
+                    status: 'initiated'
+                });
+            }
+        } catch (lessonError) {
+            console.log(`[WebRTC-Signaling] No lesson data found for ${To}, using default message`);
+        }
+
         // Vytvoření TwiML odpovědi pro WebRTC s browser signaling
         const twiml = new twilio.twiml.VoiceResponse();
         
         twiml.say({
             language: 'cs-CZ',
             voice: 'Google.cs-CZ-Standard-A'
-        }, 'Připojuji vás k AI asistentovi přes WebRTC s browser signaling.');
+        }, lessonMessage);
 
         // Připojení k WebSocket stream pro signaling
         const connect = twiml.connect();
@@ -39,15 +66,17 @@ router.post('/voice/incoming', async (req, res) => {
             track: 'both_tracks'
         });
 
-        // Uložení spojení info
-        activeConnections.set(CallSid, {
-            callSid: CallSid,
-            from: From,
-            to: To,
-            attemptId,
-            createdAt: new Date(),
-            status: 'initiated'
-        });
+        // Uložení spojení info (pokud ještě nebylo uloženo s lesson daty)
+        if (!activeConnections.has(CallSid)) {
+            activeConnections.set(CallSid, {
+                callSid: CallSid,
+                from: From,
+                to: To,
+                attemptId,
+                createdAt: new Date(),
+                status: 'initiated'
+            });
+        }
 
         console.log(`[WebRTC-Signaling] Signaling connection info uloženo pro ${CallSid}`);
 
@@ -202,12 +231,31 @@ async function initializeOpenAIConnection(connection, twilioWs) {
         openaiWs.on('open', () => {
             console.log('[WebRTC-Signaling] OpenAI WebSocket připojen');
             
+            // Vytvořit instructions na základě lesson data
+            let instructions = 'Jsi AI asistent pro výuku jazyků. Komunikuj pouze v češtině. Buď přátelský a pomáhej studentům učit se.';
+            
+            if (connection.lessonData) {
+                const lesson = connection.lessonData;
+                instructions = `Jsi AI asistent pro výuku. Komunikuj pouze v češtině. 
+                
+Nyní vedeš lekci: "${lesson.title}"
+${lesson.content ? 'Obsah lekce: ' + lesson.content : ''}
+
+${lesson.type === 'lesson' ? 'Po vysvětlení lekce polož studentovi otázky k procvičení.' : ''}
+${lesson.type === 'test' ? 'Proveď test se studenty pomocí těchto otázek: ' + JSON.stringify(lesson.questions) : ''}
+${lesson.type === 'placement_test' ? 'Proveď rozřazovací test pro určení úrovně studenta.' : ''}
+
+Buď trpělivý, vysvětluj jednoduše a poskytuj konstruktivní zpětnou vazbu.`;
+                
+                console.log('[WebRTC-Signaling] Lesson-specific instructions created:', lesson.title);
+            }
+            
             // Konfigurace session
             const sessionConfig = {
                 type: 'session.update',
                 session: {
                     modalities: ['text', 'audio'],
-                    instructions: 'Jsi AI asistent pro výuku jazyků. Komunikuj pouze v češtině. Buď přátelský a pomáhej studentům učit se.',
+                    instructions: instructions,
                     voice: 'alloy',
                     input_audio_format: 'g711_ulaw',
                     output_audio_format: 'g711_ulaw',

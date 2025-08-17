@@ -61,16 +61,18 @@ router.post('/voice/incoming', async (req, res) => {
         
         console.log(`[WebRTC-Signaling] TwiML vygenerováno pro ${CallSid}`);
 
-        // Twilio Media Stream pro obousměrnou konverzaci s barge-in
-        // KRITICKÉ: Bez tohoto není možná přerušitelná konverzace!
-        const connect = twiml.connect();
-        connect.stream({
-            name: 'openai_realtime_stream',
-            url: `wss://${req.get('host')}/api/twilio/webrtc/stream/${CallSid}`,
-            track: 'both_tracks'  // Obousměrný audio stream pro barge-in
+        // DOČASNÉ ŘEŠENÍ: Railway WebSocket problém
+        // Použijeme Record + rychlé HTTP callbacks místo Media Stream
+        twiml.record({
+            timeout: 5,
+            maxLength: 30,
+            action: `https://${req.get('host')}/api/twilio/webrtc/process/${CallSid}`,
+            method: 'POST',
+            transcribe: false,  // Použijeme OpenAI Whisper
+            playBeep: false
         });
         
-        console.log(`[WebRTC-Signaling] Twilio Media Stream URL: wss://${req.get('host')}/api/twilio/webrtc/stream/${CallSid}`);
+        console.log(`[WebRTC-Signaling] FALLBACK: Record místo Media Stream kvůli Railway WSS problému`);
 
         // Uložení spojení info (pokud ještě nebylo uloženo s lesson daty)
         if (!activeConnections.has(CallSid)) {
@@ -99,14 +101,38 @@ router.post('/voice/incoming', async (req, res) => {
 });
 
 /**
- * Test WebSocket endpoint
+ * HTTP endpoint pro zpracování Record callback (fallback pro WebSocket problém)
  */
-router.ws('/test', (ws, req) => {
-    console.log('[WebRTC-Test] Test WebSocket připojen');
-    ws.send('Test WebSocket funguje!');
-    ws.on('message', (msg) => {
-        console.log('[WebRTC-Test] Zpráva:', msg);
-    });
+router.post('/process/:callSid', async (req, res) => {
+    const callSid = req.params.callSid;
+    const recordingUrl = req.body.RecordingUrl;
+    
+    console.log(`[WebRTC-Fallback] Processing recording for ${callSid}: ${recordingUrl}`);
+    
+    try {
+        const connection = activeConnections.get(callSid);
+        if (!connection) {
+            console.error(`[WebRTC-Fallback] Connection not found for ${callSid}`);
+            return res.status(404).send('Connection not found');
+        }
+        
+        // Zde by byla integrace s OpenAI Whisper + Realtime API
+        console.log(`[WebRTC-Fallback] TODO: Process audio with OpenAI for lesson: ${connection.lessonData?.title}`);
+        
+        // Dočasná odpověď
+        const twiml = new twilio.twiml.VoiceResponse();
+        twiml.say({
+            language: 'cs-CZ',
+            voice: 'Google.cs-CZ-Standard-A'
+        }, `Děkuji za odpověď. Zpracovávám vaši nahrávku pro lekci ${connection.lessonData?.title || 'NOVAMET 881'}.`);
+        
+        res.type('text/xml');
+        res.send(twiml.toString());
+        
+    } catch (error) {
+        console.error('[WebRTC-Fallback] Error processing recording:', error);
+        res.status(500).send('Processing error');
+    }
 });
 
 /**

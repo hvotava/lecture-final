@@ -61,16 +61,22 @@ router.post('/voice/incoming', async (req, res) => {
         
         console.log(`[WebRTC-Signaling] TwiML vygenerováno pro ${CallSid}`);
 
-        // Připojení k WebSocket stream pro signaling
-        const wsUrl = `wss://${req.get('host')}/api/twilio/webrtc/stream/${CallSid}`;
-        console.log(`[WebRTC-Signaling] WebSocket URL: ${wsUrl}`);
+        // DOČASNĚ: Zkusíme bez WebSocket stream - jen pause
+        twiml.pause({ length: 5 });
+        twiml.say({
+            language: 'cs-CZ',
+            voice: 'Google.cs-CZ-Standard-A'
+        }, 'Test dokončen. Nashledanou.');
         
-        const connect = twiml.connect();
-        connect.stream({
-            name: 'webrtc_signaling_stream',
-            url: wsUrl,
-            track: 'both_tracks'
-        });
+        // PŮVODNÍ WebSocket kód (zakomentováno pro test):
+        // const wsUrl = `wss://${req.get('host')}/api/twilio/webrtc/stream/${CallSid}`;
+        // console.log(`[WebRTC-Signaling] WebSocket URL: ${wsUrl}`);
+        // const connect = twiml.connect();
+        // connect.stream({
+        //     name: 'webrtc_signaling_stream',
+        //     url: wsUrl,
+        //     track: 'both_tracks'
+        // });
 
         // Uložení spojení info (pokud ještě nebylo uloženo s lesson daty)
         if (!activeConnections.has(CallSid)) {
@@ -96,6 +102,17 @@ router.post('/voice/incoming', async (req, res) => {
         console.error('[WebRTC-Signaling] Chyba při zpracování příchozího hovoru:', error);
         res.status(500).send('Chyba serveru');
     }
+});
+
+/**
+ * Test WebSocket endpoint
+ */
+router.ws('/test', (ws, req) => {
+    console.log('[WebRTC-Test] Test WebSocket připojen');
+    ws.send('Test WebSocket funguje!');
+    ws.on('message', (msg) => {
+        console.log('[WebRTC-Test] Zpráva:', msg);
+    });
 });
 
 /**

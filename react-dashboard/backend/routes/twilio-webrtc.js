@@ -236,18 +236,34 @@ async function initializeOpenAIConnection(connection, twilioWs) {
             
             if (connection.lessonData) {
                 const lesson = connection.lessonData;
-                instructions = `Jsi AI asistent pro výuku. Komunikuj pouze v češtině. 
-                
-Nyní vedeš lekci: "${lesson.title}"
+                instructions = `Jsi AI asistent pro interaktivní výuku. Komunikuj pouze v češtině. Buď přátelský a trpělivý učitel.
+
+DŮLEŽITÉ: NIKDY neukončuj hovor sám od sebe! Vždy čekej na reakci studenta!
+
+Nyní vedeš kompletní interaktivní lekci: "${lesson.title}"
 ${lesson.content ? 'Obsah lekce: ' + lesson.content : ''}
 
-${lesson.type === 'lesson' ? 'Po vysvětlení lekce polož studentovi otázky k procvičení.' : ''}
-${lesson.type === 'test' ? 'Proveď test se studenty pomocí těchto otázek: ' + JSON.stringify(lesson.questions) : ''}
-${lesson.type === 'placement_test' ? 'Proveď rozřazovací test pro určení úrovně studenta.' : ''}
+POSTUP LEKCE:
+1. ÚVOD: Přivítej studenta a představ téma lekce
+2. VÝUKA: Vysvětluj obsah po malých částech, ptej se "Rozumíš tomu?" "Máš nějaké otázky?"
+3. INTERAKCE: Povzbuzuj studenta k dotazům a diskusi během výkladu
+4. PROCVIČENÍ: ${lesson.type === 'lesson' ? 'Po vysvětlení každé části polož ověřovací otázky' : ''}
+5. TEST: ${lesson.type === 'test' || lesson.questions ? 'Na konci proveď test s těmito otázkami: ' + JSON.stringify(lesson.questions || []) : 'Na konci shrň hlavní body'}
+6. ZÁVĚR: Shrň co student zvládl a co by měl procvičit
 
-Buď trpělivý, vysvětluj jednoduše a poskytuj konstruktivní zpětnou vazbu.`;
+${lesson.type === 'placement_test' ? 'SPECIÁLNÍ: Proveď rozřazovací test pro určení úrovně studenta.' : ''}
+
+PRAVIDLA:
+- Mluv pomalu a srozumitelně
+- Čekej na odpovědi studenta
+- Ptej se "Pokračujeme?" před přechodem k dalšímu bodu
+- Povzbuzuj k dotazům: "Zeptej se na cokoliv co ti není jasné"
+- Nikdy neříkej "nashledanou" nebo neukončuj hovor
+- Pokud student mlčí, zeptej se "Jsi tu? Máš nějakou otázku?"
+
+ZAČNI NYNÍ úvodem k lekci a počkej na reakci studenta!`;
                 
-                console.log('[WebRTC-Signaling] Lesson-specific instructions created:', lesson.title);
+                console.log('[WebRTC-Signaling] Interactive lesson instructions created:', lesson.title);
             }
             
             // Konfigurace session
@@ -264,12 +280,12 @@ Buď trpělivý, vysvětluj jednoduše a poskytuj konstruktivní zpětnou vazbu.
                         type: 'server_vad',
                         threshold: 0.5,
                         prefix_padding_ms: 300,
-                        silence_duration_ms: 800
+                        silence_duration_ms: 1500  // Delší čekání na odpověď studenta
                     },
                     tools: [],
                     tool_choice: 'auto',
-                    temperature: 0.8,
-                    max_response_output_tokens: 4096
+                    temperature: 0.7,  // Konzistentnější odpovědi pro výuku
+                    max_response_output_tokens: 2048  // Kratší odpovědi pro lepší interakci
                 }
             };
 

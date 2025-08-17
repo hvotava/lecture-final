@@ -7,6 +7,9 @@ openai
 twilio
 python-dotenv
 psycopg2-binary
+flask
+flask-cors
+flask-wtf
 # ... další závislosti dle původního requirements.txt
 jinja2
 python-multipart

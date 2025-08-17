@@ -61,16 +61,15 @@ router.post('/voice/incoming', async (req, res) => {
         
         console.log(`[WebRTC-Signaling] TwiML vygenerováno pro ${CallSid}`);
 
-        // Twilio Media Stream pro obousměrnou konverzaci s barge-in
-        // ZPĚT NA HLAVNÍ PORT - Railway blokuje externí WebSocket porty!
-        const connect = twiml.connect();
-        connect.stream({
-            name: 'openai_realtime_stream',
-            url: `wss://${req.get('host')}/api/twilio/webrtc/stream/${CallSid}`,
-            track: 'both_tracks'  // Obousměrný audio stream pro barge-in
-        });
+        // FINÁLNÍ ŘEŠENÍ: Redirect na Python Flask s aiortc WebRTC
+        // Railway Node.js nezvládá WebSocket upgrade pro Twilio Media Stream!
+        const pythonBackendUrl = process.env.PYTHON_BACKEND_URL || 'https://lecture-app-production.up.railway.app';
         
-        console.log(`[WebRTC-Signaling] WebSocket URL (hlavní port): wss://${req.get('host')}/api/twilio/webrtc/stream/${CallSid}`);
+        twiml.redirect({
+            method: 'POST'
+        }, `${pythonBackendUrl}/webrtc/voice/incoming?CallSid=${CallSid}&From=${encodeURIComponent(From)}&To=${encodeURIComponent(To)}`);
+        
+        console.log(`[WebRTC-Signaling] REDIRECT na Python Flask: ${pythonBackendUrl}/webrtc/voice/incoming`);
 
         // Uložení spojení info (pokud ještě nebylo uloženo s lesson daty)
         if (!activeConnections.has(CallSid)) {

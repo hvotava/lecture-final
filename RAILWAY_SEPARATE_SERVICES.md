@@ -3,7 +3,7 @@
 ## 🎯 Cíl: 2 samostatné Railway services
 
 ### Service 1: Python WebRTC Backend (AKTUÁLNÍ)
-- **Název:** `lecture-webrtc-backend`
+- **Název:** `lecture-app-production` (nebo jak se jmenuje váš současný service)
 - **Repository:** Současný (hlavní branch)
 - **Port:** 8080
 - **Účel:** WebRTC endpoints, OpenAI Realtime API
@@ -31,7 +31,7 @@
 5. **Nastavte environment variables:**
    ```
    NODE_ENV=production
-   PYTHON_WEBRTC_BACKEND_URL=https://lecture-webrtc-backend.up.railway.app
+   PYTHON_WEBRTC_BACKEND_URL=https://lecture-app-production.up.railway.app
    DATABASE_URL=<stejná jako Python service>
    TWILIO_ACCOUNT_SID=<stejná>
    TWILIO_AUTH_TOKEN=<stejná>
@@ -47,7 +47,7 @@
 
 ### Krok C: Testování
 1. **Frontend URL:** `https://lecture-dashboard-frontend.up.railway.app`
-2. **Backend URL:** `https://lecture-webrtc-backend.up.railway.app`
+2. **Backend URL:** `https://lecture-app-production.up.railway.app`
 3. **Telefon ikonka** → volá Python WebRTC backend
 4. **WebRTC barge-in** funguje!
 

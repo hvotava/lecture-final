@@ -53,10 +53,8 @@ router.post('/voice/incoming', async (req, res) => {
         // Vytvoření TwiML odpovědi pro WebRTC s browser signaling
         const twiml = new twilio.twiml.VoiceResponse();
         
-        twiml.say({
-            language: 'cs-CZ',
-            voice: 'Google.cs-CZ-Standard-A'
-        }, lessonMessage);
+        // ODSTRANĚNO: twiml.say() - nech AI mluvit přes OpenAI místo Twilio TTS
+        // Twilio TTS říkalo "Začínáme školení..." před OpenAI připojením
 
         // Připojení k WebSocket stream pro signaling
         const connect = twiml.connect();
@@ -306,7 +304,9 @@ ZAČNI NYNÍ úvodem!`;
             
             // Po konfiguraci session, pošli initial message pro start lekce
             if (connection.lessonData) {
+                console.log('[WebRTC-Signaling] Plánuji initial response trigger pro lesson:', connection.lessonData.title);
                 setTimeout(() => {
+                    console.log('[WebRTC-Signaling] Spouštím initial response trigger...');
                     // Zkusíme jednodušší přístup - jen spustíme response bez user message
                     const responseCreate = {
                         type: 'response.create',
@@ -324,7 +324,7 @@ Můžeme začít?"`
                     openaiWs.send(JSON.stringify(responseCreate));
                     
                     console.log('[WebRTC-Signaling] Initial response trigger sent to OpenAI');
-                }, 1000);
+                }, 500); // Zkráceno na 500ms pro rychlejší start
             }
         });
 

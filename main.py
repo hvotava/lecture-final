@@ -203,12 +203,23 @@ async def test_connections_async():
     except Exception as e:
         print(f"❌ OpenAI import failed: {e}")
 
-# CORS (pro případné admin rozhraní)
+# CORS pro cross-service komunikaci (Node.js frontend → Python backend)
+allowed_origins = [
+    "http://localhost:3000",  # React dev
+    "http://localhost:5000",  # Node.js dev
+    "https://lecture-dashboard-frontend.up.railway.app",  # Production frontend
+    "https://lecture-app-production-5f70.up.railway.app",  # Fallback
+]
+
+# Pro development povolíme všechno
+if os.getenv('NODE_ENV') == 'development':
+    allowed_origins = ["*"]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=allowed_origins,
     allow_credentials=True,
-    allow_methods=["*"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allow_headers=["*"],
 )
 

@@ -62,15 +62,19 @@ router.post('/voice/incoming', async (req, res) => {
         console.log(`[WebRTC-Signaling] TwiML vygenerováno pro ${CallSid}`);
 
         // Twilio Media Stream pro obousměrnou konverzaci s barge-in
-        // OPRAVENO: Server nyní poslouchá na 0.0.0.0 pro externí připojení!
+        // DEDIKOVANÝ WEBSOCKET SERVER na jiném portu pro Railway!
+        const host = req.get('host').replace(/:\d+$/, ''); // Odstraň port
+        const wsPort = process.env.WS_PORT || (parseInt(process.env.PORT || 5000) + 1);
+        const wsUrl = `wss://${host}:${wsPort}/stream/${CallSid}`;
+        
         const connect = twiml.connect();
         connect.stream({
             name: 'openai_realtime_stream',
-            url: `wss://${req.get('host')}/api/twilio/webrtc/stream/${CallSid}`,
+            url: wsUrl,
             track: 'both_tracks'  // Obousměrný audio stream pro barge-in
         });
         
-        console.log(`[WebRTC-Signaling] Twilio Media Stream URL: wss://${req.get('host')}/api/twilio/webrtc/stream/${CallSid}`);
+        console.log(`[WebRTC-Signaling] Dedikovaný WebSocket URL: ${wsUrl}`);
 
         // Uložení spojení info (pokud ještě nebylo uloženo s lesson daty)
         if (!activeConnections.has(CallSid)) {
@@ -101,10 +105,9 @@ router.post('/voice/incoming', async (req, res) => {
 
 
 /**
- * WebSocket endpoint pro Twilio Media Stream + WebRTC Signaling
+ * Hlavní WebSocket handler pro Twilio Media Stream
  */
-router.ws('/stream/:callSid', (ws, req) => {
-    const callSid = req.params.callSid;
+function handleTwilioWebSocket(ws, callSid) {
     console.log(`[WebRTC-Signaling] WebSocket připojen pro ${callSid}`);
     console.log(`[WebRTC-Signaling] Aktivní spojení:`, Array.from(activeConnections.keys()));
 
@@ -174,6 +177,14 @@ router.ws('/stream/:callSid', (ws, req) => {
     });
     
     console.log(`[WebRTC-Signaling] WebSocket event handlers nastaveny pro ${callSid}`);
+}
+
+/**
+ * Express WebSocket endpoint pro Twilio Media Stream
+ */
+router.ws('/stream/:callSid', (ws, req) => {
+    const callSid = req.params.callSid;
+    handleTwilioWebSocket(ws, callSid);
 });
 
 /**
@@ -641,4 +652,7 @@ setInterval(() => {
     }
 }, 5 * 60 * 1000); // Každých 5 minut
 
-module.exports = router; 
+module.exports = { 
+    router, 
+    handleTwilioWebSocket 
+}; 

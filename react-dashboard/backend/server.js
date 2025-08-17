@@ -14,6 +14,10 @@ const app = express();
 // Enable WebSocket support for Railway - POUZE na hlavním portu!
 const server = require('http').createServer(app);
 const wsInstance = expressWs(app, server);
+
+// CRITICAL: Ujistíme se, že express-ws je správně připojen
+console.log('🔌 Express-WS inicializováno:', !!wsInstance);
+console.log('🔌 WebSocket server připojen:', !!wsInstance.getWss());
 const PORT = process.env.PORT || 5000;
 
 // CRITICAL: Trust proxy for Railway deployment (fixes X-Forwarded-For error)
@@ -381,6 +385,12 @@ const startServer = async () => {
       console.log(`📊 Dashboard API: http://localhost:${PORT}/api`);
       console.log(`🏥 Health check: http://localhost:${PORT}/api/health`);
       console.log(`🌐 WebSocket ready for external connections`);
+      
+      // Debug WebSocket routes
+      console.log(`🔌 WebSocket routes:`);
+      console.log(`   - wss://host/api/twilio/webrtc/test`);
+      console.log(`   - wss://host/api/twilio/webrtc/stream/{callSid}`);
+      console.log(`   - wss://host/api/twilio/webrtc/signaling/{clientId}`);
     });
   } catch (error) {
     console.error('❌ Unable to start server:', error);

@@ -107,6 +107,9 @@ router.post('/voice/incoming', async (req, res) => {
  */
 router.ws('/test', (ws, req) => {
     console.log(`[WebRTC-TEST] WebSocket test připojen!`);
+    console.log(`[WebRTC-TEST] Request headers:`, req.headers);
+    console.log(`[WebRTC-TEST] WebSocket ready state:`, ws.readyState);
+    
     ws.send('WebSocket funguje!');
     ws.on('message', (msg) => {
         console.log(`[WebRTC-TEST] Zpráva:`, msg.toString());
@@ -115,6 +118,9 @@ router.ws('/test', (ws, req) => {
     ws.on('close', () => {
         console.log(`[WebRTC-TEST] WebSocket test uzavřen`);
     });
+    ws.on('error', (error) => {
+        console.error(`[WebRTC-TEST] WebSocket error:`, error);
+    });
 });
 
 /**
@@ -122,7 +128,10 @@ router.ws('/test', (ws, req) => {
  */
 router.ws('/stream/:callSid', (ws, req) => {
     const callSid = req.params.callSid;
-    console.log(`[WebRTC-Signaling] WebSocket připojen pro ${callSid}`);
+    console.log(`[WebRTC-Signaling] ✅ WebSocket připojen pro ${callSid}`);
+    console.log(`[WebRTC-Signaling] Request URL:`, req.url);
+    console.log(`[WebRTC-Signaling] Request headers:`, req.headers);
+    console.log(`[WebRTC-Signaling] WebSocket ready state:`, ws.readyState);
     console.log(`[WebRTC-Signaling] Aktivní spojení:`, Array.from(activeConnections.keys()));
 
     const connection = activeConnections.get(callSid);

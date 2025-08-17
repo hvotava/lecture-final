@@ -380,19 +380,88 @@ function forwardToBrowserClients(callSid, dataType, payload) {
 function handleWebRTCSignaling(clientId, signalingData) {
     console.log(`[WebRTC-Signaling] WebRTC signaling od ${clientId}:`, signalingData.type);
     
-    // Zde by byla logika pro přeposlání signaling zpráv mezi clients
-    // Pro demo účely zatím jen logujeme
+    const client = signalingClients.get(clientId);
+    if (!client) {
+        console.error(`[WebRTC-Signaling] Client ${clientId} nenalezen`);
+        return;
+    }
     
-    // V reálné implementaci by se zde přeposílaly zprávy mezi peer connections
+    switch (signalingData.type) {
+        case 'webrtc_offer':
+            console.log(`[WebRTC-Signaling] Zpracování WebRTC offer od ${clientId}`);
+            // Pro demo - echo offer zpět jako answer
+            if (client.ws.readyState === WebSocket.OPEN) {
+                client.ws.send(JSON.stringify({
+                    type: 'webrtc_answer',
+                    answer: {
+                        type: 'answer',
+                        sdp: signalingData.offer.sdp.replace('a=sendrecv', 'a=recvonly')
+                    },
+                    clientId: clientId
+                }));
+            }
+            break;
+            
+        case 'webrtc_answer':
+            console.log(`[WebRTC-Signaling] WebRTC answer přijat od ${clientId}`);
+            // Zpracovat answer
+            break;
+            
+        case 'ice_candidate':
+            console.log(`[WebRTC-Signaling] ICE candidate od ${clientId}:`, signalingData.candidate?.candidate?.substring(0, 50));
+            // Pro demo - echo ICE candidate zpět
+            if (client.ws.readyState === WebSocket.OPEN) {
+                setTimeout(() => {
+                    client.ws.send(JSON.stringify({
+                        type: 'ice_candidate',
+                        candidate: {
+                            candidate: 'candidate:1 1 UDP 2113667326 192.168.1.1 54400 typ host',
+                            sdpMLineIndex: 0,
+                            sdpMid: '0'
+                        },
+                        clientId: clientId
+                    }));
+                }, 100);
+            }
+            break;
+            
+        default:
+            console.log(`[WebRTC-Signaling] Neznámý signaling type: ${signalingData.type}`);
+    }
 }
 
 /**
  * Přeposlání browser audio do Twilio
  */
 function forwardBrowserAudioToTwilio(audioData) {
-    // Najít odpovídající Twilio connection a přeposlat audio
-    // Pro demo účely zatím jen logujeme
-    console.log('[WebRTC-Signaling] Audio z browser client přijato');
+    console.log('[WebRTC-Signaling] Audio z browser client přijato:', audioData.dataType || 'unknown');
+    
+    // Najít aktivní Twilio connections
+    for (const [callSid, connection] of activeConnections.entries()) {
+        if (connection.status === 'connected' && connection.openaiWs) {
+            // Přeposlat audio data do OpenAI
+            try {
+                const audioMessage = {
+                    type: 'input_audio_buffer.append',
+                    audio: audioData.payload || audioData.audio
+                };
+                
+                if (connection.openaiWs.readyState === WebSocket.OPEN) {
+                    connection.openaiWs.send(JSON.stringify(audioMessage));
+                    console.log(`[WebRTC-Signaling] Audio přeposlán do OpenAI pro ${callSid}`);
+                } else {
+                    console.warn(`[WebRTC-Signaling] OpenAI WebSocket není připojen pro ${callSid}`);
+                }
+            } catch (error) {
+                console.error('[WebRTC-Signaling] Chyba při přeposílání audio do OpenAI:', error);
+            }
+        }
+    }
+    
+    // Pokud není žádné aktivní spojení, informovat browser
+    if (activeConnections.size === 0) {
+        console.log('[WebRTC-Signaling] Žádné aktivní Twilio spojení pro browser audio');
+    }
 }
 
 /**

@@ -1,15 +1,8 @@
-[phases.setup]
-nixPkgs = ["python39", "pip"]
-
-[phases.install]
-cmds = [
-    "pip install -r requirements.txt"
-]
-
-[phases.build]
-cmds = [
-    "echo 'Python build completed'"
-]
+[build]
+cmd = "cd react-dashboard/backend && npm ci"
 
 [start]
-cmd = "python main.py" 
+cmd = "cd react-dashboard/backend && npm start"
+
+[variables]
+NODE_ENV = "production" 

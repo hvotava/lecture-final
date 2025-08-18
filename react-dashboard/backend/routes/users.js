@@ -382,13 +382,16 @@ router.post('/:id/call', auth, adminOnly, async (req, res) => {
         console.log('🔍 Using status backend URL for Twilio webhooks:', statusBackendUrl);
         console.log('🎯 FINAL WebRTC Voice URL:', `${statusBackendUrl}/api/twilio/webrtc/voice/incoming`);
 
+        // Use new Node.js WebRTC backend instead of Python
+        const webrtcBackendUrl = process.env.WEBRTC_BACKEND_URL || 'https://your-webrtc-backend.up.railway.app';
+        
         const call = await twilioClient.calls.create({
           to: user.phone,
           from: process.env.TWILIO_PHONE_NUMBER,
-          url: `${voiceBackendUrl}/webrtc/voice/incoming`,  // Python WebRTC backend
-          method: 'POST',
+          url: `${webrtcBackendUrl}/twilio/voice`,  // New Node.js WebRTC backend
+          method: 'GET',
           record: false, // WebRTC nepotřebuje record
-          statusCallback: `${statusBackendUrl}/api/twilio/status`,
+          statusCallback: `${webrtcBackendUrl}/twilio/status`,
           statusCallbackEvent: ['initiated', 'ringing', 'answered', 'completed'],
           statusCallbackMethod: 'POST'
         });

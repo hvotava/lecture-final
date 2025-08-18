@@ -57,6 +57,7 @@ import { User, Company, UserStats, UserRole } from '../types';
 import { useAuth } from '../contexts/AuthContext';
 import { canManageUsers } from '../utils/permissions';
 import { getRoleColor, getRoleDisplayName } from '../utils/permissions';
+import { WebRTCVoicePanel } from '../components/WebRTCVoicePanel';
 
 interface UserFormData {
   name: string;
@@ -101,7 +102,9 @@ const UserManagement: React.FC = () => {
   // Dialog states
   const [dialogOpen, setDialogOpen] = useState(false);
   const [roleDialogOpen, setRoleDialogOpen] = useState(false);
+  const [webrtcDialogOpen, setWebrtcDialogOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
+  const [callingUser, setCallingUser] = useState<User | null>(null);
   const [formData, setFormData] = useState<UserFormData>({
     name: '',
     email: '',
@@ -365,11 +368,17 @@ const UserManagement: React.FC = () => {
     }
   };
 
-  // Twilio calling functionality
-  const handleCallUser = async (targetUser: User) => {
+  // WebRTC calling functionality
+  const handleCallUser = (targetUser: User) => {
+    setCallingUser(targetUser);
+    setWebrtcDialogOpen(true);
+  };
+
+  // Fallback Twilio calling (for backup)
+  const handleTwilioCallUser = async (targetUser: User) => {
     try {
       await userService.callUser(targetUser.id, { lessonId: 1 });
-      showSnackbar(`Volání zahájeno pro uživatele ${targetUser.name}`, 'success');
+      showSnackbar(`Twilio volání zahájeno pro uživatele ${targetUser.name}`, 'success');
     } catch (error: any) {
       console.error('Error calling user:', error);
       showSnackbar('Nepodařilo se zahájit volání', 'error');
@@ -1270,6 +1279,59 @@ const UserManagement: React.FC = () => {
           >
             Změnit roli
           </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* WebRTC Voice Call Dialog */}
+      <Dialog
+        open={webrtcDialogOpen}
+        onClose={() => setWebrtcDialogOpen(false)}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle>
+          🎙️ WebRTC Hovor s AI Asistentem
+          {callingUser && (
+            <Typography variant="subtitle2" color="text.secondary">
+              Uživatel: {callingUser.name} ({callingUser.phone})
+            </Typography>
+          )}
+        </DialogTitle>
+        <DialogContent>
+          {callingUser && (
+            <WebRTCVoicePanel
+              userId={callingUser.id}
+              userName={callingUser.name}
+              backendUrl={process.env.REACT_APP_WEBRTC_BACKEND_URL}
+              onError={(error) => {
+                showSnackbar(`WebRTC chyba: ${error}`, 'error');
+              }}
+              onStatusChange={(status) => {
+                console.log('WebRTC status:', status);
+              }}
+              onCallStart={() => {
+                showSnackbar(`WebRTC hovor zahájen s ${callingUser.name}`, 'success');
+              }}
+              onCallEnd={() => {
+                showSnackbar('WebRTC hovor ukončen', 'info');
+                setWebrtcDialogOpen(false);
+              }}
+            />
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setWebrtcDialogOpen(false)}>
+            Zavřít
+          </Button>
+          {callingUser && (
+            <Button 
+              onClick={() => handleTwilioCallUser(callingUser)}
+              variant="outlined"
+              color="secondary"
+            >
+              📞 Fallback Twilio
+            </Button>
+          )}
         </DialogActions>
       </Dialog>
 

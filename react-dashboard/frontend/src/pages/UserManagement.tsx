@@ -206,7 +206,7 @@ const UserManagement: React.FC = () => {
     }
   };
 
-  const showSnackbar = (message: string, severity: 'success' | 'error' | 'warning' | 'info') => {
+  const showSnackbar = (message: string, severity: 'success' | 'error') => {
     setSnackbar({ open: true, message, severity });
   };
 
@@ -1313,7 +1313,7 @@ const UserManagement: React.FC = () => {
                 showSnackbar(`WebRTC hovor zahájen s ${callingUser.name}`, 'success');
               }}
               onCallEnd={() => {
-                showSnackbar('WebRTC hovor ukončen', 'info');
+                showSnackbar('WebRTC hovor ukončen', 'success');
                 setWebrtcDialogOpen(false);
               }}
             />

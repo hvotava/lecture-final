@@ -389,6 +389,12 @@ const startServer = async () => {
       console.log(`🏥 Health check: http://localhost:${PORT}/api/health`);
       console.log(`🌐 WebSocket ready for external connections`);
       
+      // Debug Twilio configuration
+      console.log(`📞 Twilio Configuration:`);
+      console.log(`   - TWILIO_ACCOUNT_SID: ${process.env.TWILIO_ACCOUNT_SID ? 'SET' : 'NOT SET'}`);
+      console.log(`   - TWILIO_AUTH_TOKEN: ${process.env.TWILIO_AUTH_TOKEN ? 'SET' : 'NOT SET'}`);
+      console.log(`   - TWILIO_PHONE_NUMBER: ${process.env.TWILIO_PHONE_NUMBER || 'NOT SET'}`);
+      
       // Debug WebSocket routes
       console.log(`🔌 WebSocket routes:`);
       console.log(`   - wss://host/api/twilio/webrtc/test`);

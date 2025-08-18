@@ -325,6 +325,13 @@ router.delete('/:id', auth, adminOnly, async (req, res) => {
 // Call user with Twilio integration (admin only)
 router.post('/:id/call', auth, adminOnly, async (req, res) => {
   try {
+    console.log('📞 Call user endpoint called');
+    console.log('🔑 Twilio config check:');
+    console.log('   - TWILIO_ACCOUNT_SID:', process.env.TWILIO_ACCOUNT_SID ? 'SET' : 'NOT SET');
+    console.log('   - TWILIO_AUTH_TOKEN:', process.env.TWILIO_AUTH_TOKEN ? 'SET' : 'NOT SET');
+    console.log('   - TWILIO_PHONE_NUMBER:', process.env.TWILIO_PHONE_NUMBER || 'NOT SET');
+    console.log('   - twilioClient:', twilioClient ? 'INITIALIZED' : 'NULL');
+    
     const user = await User.findByPk(req.params.id);
     if (!user) {
       return res.status(404).json({ error: 'User not found' });

@@ -23,6 +23,7 @@
     "helmet": "^7.0.0",
     "jsonwebtoken": "^9.0.2",
     "morgan": "^1.10.0",
+    "node-fetch": "^2.6.12",
     "openai": "^4.20.0",
     "pdf-parse": "^1.1.1",
     "pg": "^8.11.3",

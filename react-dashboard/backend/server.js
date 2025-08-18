@@ -74,7 +74,9 @@ app.get('/api/health', (req, res) => {
 const authRoutes = require('./routes/auth');
 const userRoutes = require('./routes/users');
 const twilioRoutes = require('./routes/twilio');
-// Twilio WebRTC routes už importované výše
+const webrtcRoutes = require('./routes/webrtc');
+// WebSocket handler
+const { setupTwilioWebSocket } = require('./websocket/twilioStream');
 
 // Routes
 app.use('/api/auth', authRoutes);
@@ -86,6 +88,7 @@ app.use('/api/lessons', require('./routes/lessons'));
 app.use('/api/tests', require('./routes/tests'));
 app.use('/api/dashboard', require('./routes/dashboard'));
 app.use('/api/twilio', twilioRoutes);
+app.use('/api/webrtc', webrtcRoutes);
 app.use('/api/twilio/webrtc', require('./routes/twilio-webrtc').router);
 app.use('/api/content', require('./routes/content'));
 app.use('/api/ai-proxy', require('./routes/ai-proxy'));
@@ -397,6 +400,12 @@ const startServer = async () => {
     process.exit(1);
   }
 };
+
+// Setup WebRTC WebSocket handler
+setupTwilioWebSocket(server);
+
+// Setup WebRTC WebSocket handler
+setupTwilioWebSocket(server);
 
 startServer(); // Force Railway redeploy - Wed Aug  6 18:38:35 CEST 2025
 // FORCE REDEPLOY - Wed Aug  6 22:27:56 CEST 2025

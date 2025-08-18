@@ -1,0 +1,259 @@
+const express = require('express');
+const rateLimit = require('express-rate-limit');
+const WebSocket = require('ws');
+const { parse } = require('url');
+
+const router = express.Router();
+
+// Rate limiting: 30 requests per minute per IP
+const sessionRateLimit = rateLimit({
+  windowMs: 60 * 1000, // 1 minute
+  max: 30,
+  message: {
+    error: 'Too many session requests',
+    retryAfter: '1 minute'
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+/**
+ * POST /session
+ * Vytvoří OpenAI ephemeral session
+ */
+router.post('/session', sessionRateLimit, async (req, res) => {
+  try {
+    const requestId = req.headers['x-request-id'] || `req_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+    console.log(`[${requestId}] 🔑 Creating OpenAI session...`);
+
+    const { instructions, voice = 'alloy', temperature = 0.8, max_response_output_tokens = 4096 } = req.body;
+
+    // Default instructions for Czech language learning
+    const defaultInstructions = `Jsi AI asistent pro výuku českého jazyka v oblasti průmyslu a technologií. 
+Tvoje role:
+1. Veď interaktivní lekce podle obsahu, který ti bude poskytnut
+2. Odpovídej v češtině, používej jasný a srozumitelný jazyk
+3. Ptej se na otázky k ověření porozumění
+4. Povzbuzuj studenta k aktivní účasti
+5. Po dokončení lekce proveď krátký test
+6. Umožni "barge-in" - student tě může kdykoliv přerušit s otázkou
+
+Mluvíš přirozeně a trpělivě. Čekáš na reakce studenta.`;
+
+    // Prepare request for OpenAI Realtime Sessions API
+    const sessionRequest = {
+      model: 'gpt-4o-realtime-preview',
+      voice,
+      modalities: ['text', 'audio'],
+      instructions: instructions || defaultInstructions,
+      temperature,
+      max_response_output_tokens,
+      turn_detection: {
+        type: 'server_vad',
+        threshold: 0.5,
+        prefix_padding_ms: 300,
+        silence_duration_ms: 500,
+      },
+      input_audio_format: 'pcm16',
+      output_audio_format: 'pcm16',
+      input_audio_transcription: {
+        model: 'whisper-1'
+      }
+    };
+
+    console.log(`[${requestId}] 📡 Requesting ephemeral session from OpenAI...`);
+
+    // Call OpenAI Realtime Sessions API
+    const fetch = require('node-fetch');
+    const response = await fetch('https://api.openai.com/v1/realtime/sessions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`,
+        'Content-Type': 'application/json',
+        'OpenAI-Beta': 'realtime=v1'
+      },
+      body: JSON.stringify(sessionRequest)
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error(`[${requestId}] ❌ OpenAI API error:`, response.status, errorText);
+      
+      return res.status(response.status).json({
+        error: 'OpenAI API error',
+        message: errorText,
+        requestId
+      });
+    }
+
+    const sessionData = await response.json();
+    console.log(`[${requestId}] ✅ Session created:`, sessionData.id);
+
+    // Return session data to frontend
+    res.json({
+      success: true,
+      session: sessionData,
+      requestId,
+      timestamp: new Date().toISOString()
+    });
+
+  } catch (error) {
+    const requestId = req.headers['x-request-id'] || 'unknown';
+    console.error(`[${requestId}] 💥 Session creation error:`, error);
+
+    if (error.name === 'ValidationError') {
+      return res.status(400).json({
+        error: 'Invalid request data',
+        details: error.message,
+        requestId
+      });
+    }
+
+    res.status(500).json({
+      error: 'Internal server error',
+      message: error.message,
+      requestId
+    });
+  }
+});
+
+/**
+ * GET /session/health
+ * Health check pro session endpoint
+ */
+router.get('/session/health', (req, res) => {
+  res.json({
+    status: 'healthy',
+    endpoint: '/session',
+    rateLimit: '30 req/min',
+    timestamp: new Date().toISOString()
+  });
+});
+
+/**
+ * GET /voice
+ * Twilio Voice webhook - vrací TwiML pro Media Stream
+ */
+router.get('/voice', (req, res) => {
+  const { CallSid, From, To } = req.query;
+  const requestId = req.headers['x-request-id'] || `twilio_${Date.now()}`;
+  
+  console.log(`[${requestId}] 📞 Incoming Twilio call:`, { CallSid, From, To });
+
+  // Získej base URL bez https:// pro WebSocket
+  const baseUrl = (process.env.APP_BASE_URL || `https://${req.get('host')}`).replace(/^https?:\/\//, '');
+  const wsUrl = `wss://${baseUrl}/api/webrtc/stream`;
+
+  // TwiML response s Media Stream
+  const twiml = `<?xml version="1.0" encoding="UTF-8"?>
+<Response>
+  <Say voice="Google.cs-CZ-Standard-A" language="cs-CZ">
+    Vítejte v interaktivním školení. Připojuji vás k AI asistentovi.
+  </Say>
+  <Connect>
+    <Stream 
+      name="openai_realtime_stream"
+      url="${wsUrl}"
+      track="both_tracks"
+    />
+  </Connect>
+</Response>`;
+
+  console.log(`[${requestId}] 📡 TwiML WebSocket URL: ${wsUrl}`);
+  
+  // Vrať TwiML jako XML
+  res.type('text/xml');
+  res.send(twiml);
+});
+
+/**
+ * POST /voice  
+ * Alternativní endpoint pro POST requests z Twilio
+ */
+router.post('/voice', (req, res) => {
+  const { CallSid, From, To } = req.body;
+  const requestId = req.headers['x-request-id'] || `twilio_${Date.now()}`;
+  
+  console.log(`[${requestId}] 📞 Incoming Twilio call (POST):`, { CallSid, From, To });
+
+  // Získej base URL bez https:// pro WebSocket
+  const baseUrl = (process.env.APP_BASE_URL || `https://${req.get('host')}`).replace(/^https?:\/\//, '');
+  const wsUrl = `wss://${baseUrl}/api/webrtc/stream`;
+
+  // TwiML response s Media Stream
+  const twiml = `<?xml version="1.0" encoding="UTF-8"?>
+<Response>
+  <Say voice="Google.cs-CZ-Standard-A" language="cs-CZ">
+    Vítejte v interaktivním školení. Připojuji vás k AI asistentovi.
+  </Say>
+  <Connect>
+    <Stream 
+      name="openai_realtime_stream"
+      url="${wsUrl}"
+      track="both_tracks"
+    />
+  </Connect>
+</Response>`;
+
+  console.log(`[${requestId}] 📡 TwiML WebSocket URL: ${wsUrl}`);
+  
+  // Vrať TwiML jako XML
+  res.type('text/xml');
+  res.send(twiml);
+});
+
+/**
+ * POST /status
+ * Twilio status callback webhook
+ */
+router.post('/status', (req, res) => {
+  const { CallSid, CallStatus, Duration } = req.body;
+  const requestId = req.headers['x-request-id'] || `status_${Date.now()}`;
+  
+  console.log(`[${requestId}] 📊 Call status update:`, { 
+    CallSid, 
+    CallStatus, 
+    Duration: Duration ? `${Duration}s` : 'N/A'
+  });
+
+  // Log important status changes
+  switch (CallStatus) {
+    case 'ringing':
+      console.log(`[${requestId}] 🔔 Call ringing...`);
+      break;
+    case 'in-progress':
+      console.log(`[${requestId}] 🗣️ Call answered, stream starting...`);
+      break;
+    case 'completed':
+      console.log(`[${requestId}] ✅ Call completed after ${Duration || '?'}s`);
+      break;
+    case 'busy':
+    case 'no-answer':
+    case 'failed':
+      console.log(`[${requestId}] ❌ Call failed: ${CallStatus}`);
+      break;
+  }
+
+  // Twilio očekává 200 OK response
+  res.status(200).send('OK');
+});
+
+/**
+ * GET /health
+ * Health check pro WebRTC endpoints
+ */
+router.get('/health', (req, res) => {
+  const baseUrl = (process.env.APP_BASE_URL || `https://${req.get('host')}`).replace(/^https?:\/\//, '');
+  
+  res.json({
+    status: 'healthy',
+    endpoints: {
+      voice: `${process.env.APP_BASE_URL || `https://${req.get('host')}`}/api/webrtc/voice`,
+      stream: `wss://${baseUrl}/api/webrtc/stream`,
+      status: `${process.env.APP_BASE_URL || `https://${req.get('host')}`}/api/webrtc/status`
+    },
+    timestamp: new Date().toISOString()
+  });
+});
+
+module.exports = router; 

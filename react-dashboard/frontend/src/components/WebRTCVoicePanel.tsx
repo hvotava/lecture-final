@@ -44,7 +44,7 @@ interface WebRTCVoicePanelProps {
 export const WebRTCVoicePanel: React.FC<WebRTCVoicePanelProps> = ({
   userId,
   userName,
-  backendUrl = process.env.REACT_APP_WEBRTC_BACKEND_URL || 'http://localhost:8080',
+  backendUrl = process.env.REACT_APP_BACKEND_URL || 'http://localhost:5000',
   onError,
   onStatusChange,
   onCallStart,
@@ -71,7 +71,7 @@ export const WebRTCVoicePanel: React.FC<WebRTCVoicePanelProps> = ({
   const createSession = async (): Promise<OpenAISession> => {
     const requestId = `req_${Date.now()}_${Math.random().toString(36).slice(2)}`;
     
-    const response = await fetch(`${backendUrl}/session`, {
+    const response = await fetch(`${backendUrl}/api/webrtc/session`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

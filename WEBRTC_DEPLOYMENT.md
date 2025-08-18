@@ -1,336 +1,186 @@
-# WebRTC Implementace - Nasazení a konfigurace
+# 🚂 WebRTC Backend Deployment na Railway
 
-## Přehled
+## 🎯 Cíl
 
-Tato implementace přepracovává stávající propojení z OpenAI na Twilio tak, aby používalo WebRTC technologii místo standardního WebSocket řešení. WebRTC poskytuje:
+Nasadit **Node.js WebRTC backend** jako **nový service** na Railway vedle stávajícího Python backendu.
 
-- **Nižší latenci** - Přímé P2P spojení
-- **Lepší kvalitu zvuku** - Pokročilé kodéky a adaptivní bitrate
-- **Robustnější spojení** - Automatické obnovení připojení
-- **Lepší škálovatelnost** - Menší zátěž serveru
+## 📋 Přehled Serviců
 
-## Architektura
+Po deployment budete mít **3 services** na Railway:
 
-```
-Twilio Call → WebRTC Endpoint → WebRTC Service → OpenAI Realtime API
-                    ↓
-              WebRTC PeerConnection ← → Browser Client
-```
+1. **lecture-app-production** (Python) - stávající backend
+2. **lecture-webrtc-backend** (Node.js) - nový WebRTC backend  
+3. **lecture-dashboard-frontend** (Node.js) - React dashboard
 
-### Komponenty
+## 🚀 Deployment Kroky
 
-1. **Backend Services**
-   - `WebRTCRealtimeService` - Hlavní WebRTC logika
-   - `TwilioWebRTCHandler` - Twilio integrace
-   - WebRTC routes - API endpointy
+### **STEP 1: Vytvoření nového Railway Service**
 
-2. **Frontend Components**
-   - `WebRTCPhone` - React komponenta pro hovory
-   - `WebRTCDemo` - Demo stránka
-   - WebRTC API integrace
+1. **Otevřete Railway Dashboard**: https://railway.app/dashboard
+2. **Vyberte svůj projekt** (kde je lecture-app-production)
+3. **Klikněte na "+ New Service"**
+4. **Vyberte "GitHub Repo"**
+5. **Vyberte repository**: `hvotava/LectureIII`
+6. **Pojmenujte service**: `lecture-webrtc-backend`
 
-3. **Node.js Backend**
-   - `twilio-webrtc.js` routes
-   - WebSocket server pro signaling
-   - ICE server konfigurace
+### **STEP 2: Konfigurace Build**
 
-## Instalace
+Railway by mělo automaticky detekovat `server/` složku. Pokud ne:
 
-### 1. Backend Dependencies (Python)
+1. **Settings** → **Build**
+2. **Root Directory**: `server`
+3. **Build Command**: `npm run build`
+4. **Start Command**: `npm start`
+
+### **STEP 3: Environment Variables**
+
+V **Variables** sekci přidejte:
 
 ```bash
-pip install aiortc==1.6.0 aiofiles==23.2.1
+# Povinné
+OPENAI_API_KEY=sk-proj-your-actual-api-key-here
+APP_BASE_URL=https://lecture-webrtc-backend.up.railway.app
+NODE_ENV=production
+
+# Volitelné (pro CORS)
+ALLOWED_ORIGINS=https://lecture-dashboard-frontend.up.railway.app,https://lecture-app-production-5f70.up.railway.app
 ```
 
-### 2. Node.js Dependencies
+**⚠️ DŮLEŽITÉ**: Použijte svůj skutečný OpenAI API klíč!
 
+### **STEP 4: Deploy**
+
+1. **Deploy** - Railway začne build
+2. **Čekejte na úspěšný deploy** (zelený status)
+3. **Zkopírujte URL** vašeho nového service
+
+## 🔧 Aktualizace Stávajícího Systému
+
+### **STEP 5: Aktualizace Node.js Dashboard Backend**
+
+V `lecture-dashboard-frontend` (nebo jak se jmenuje váš dashboard service):
+
+1. **Variables** → přidejte:
 ```bash
-cd react-dashboard/backend
-npm install wrtc ws
+WEBRTC_BACKEND_URL=https://lecture-webrtc-backend.up.railway.app
 ```
 
-### 3. Frontend Dependencies
+2. **Redeploy** dashboard service
 
-Jsou již součástí stávajícího React projektu.
+### **STEP 6: Twilio Webhook Konfigurace**
 
-## Konfigurace
+1. **Twilio Console**: https://console.twilio.com/
+2. **Phone Numbers** → vyberte vaše číslo
+3. **Voice Configuration**:
+   ```
+   Request URL: https://lecture-webrtc-backend.up.railway.app/twilio/voice
+   HTTP Method: GET
+   ```
+4. **Save**
 
-### 1. Environment Variables
+## 🧪 Testování
 
-Přidejte do `.env` souborů:
-
+### **Test 1: Health Check**
 ```bash
-# Stávající OpenAI konfigurace
-OPENAI_API_KEY=sk-...
-
-# WebRTC konfigurace (volitelné)
-WEBRTC_STUN_SERVER_1=stun:stun.l.google.com:19302
-WEBRTC_STUN_SERVER_2=stun:stun1.l.google.com:19302
-
-# Twilio konfigurace (stávající)
-TWILIO_ACCOUNT_SID=AC...
-TWILIO_AUTH_TOKEN=...
-TWILIO_PHONE_NUMBER=+420...
+curl https://lecture-webrtc-backend.up.railway.app/health
 ```
-
-### 2. Twilio Webhook Konfigurace
-
-Aktualizujte webhook URL pro WebRTC verzi:
-
-**Stávající webhook:**
-```
-https://your-domain.com/voice/call
-```
-
-**Nový WebRTC webhook:**
-```
-https://your-domain.com/voice/webrtc
-```
-
-### 3. HTTPS Požadavky
-
-WebRTC vyžaduje HTTPS pro produkční nasazení:
-- Certifikát SSL/TLS
-- Secure WebSocket (WSS) připojení
-- CORS konfigurace pro WebRTC
-
-## Nasazení
-
-### 1. Railway Deployment
-
-Aktualizujte `railway.json`:
-
+**Očekávaný výsledek**:
 ```json
 {
-  "build": {
-    "builder": "NIXPACKS"
-  },
-  "deploy": {
-    "numReplicas": 1,
-    "sleepApplication": false,
-    "restartPolicyType": "ON_FAILURE"
-  }
+  "status": "healthy",
+  "service": "lecture-webrtc-backend",
+  "timestamp": "2025-01-XX...",
+  "uptime": 123
 }
 ```
 
-### 2. Dockerfile Updates
-
-Přidejte do Dockerfile:
-
-```dockerfile
-# WebRTC dependencies
-RUN apt-get update && apt-get install -y \
-    libavdevice-dev \
-    libavfilter-dev \
-    libopus-dev \
-    libvpx-dev \
-    pkg-config
-
-# Python WebRTC dependencies
-RUN pip install aiortc aiofiles
-```
-
-### 3. Nginx Konfigurace (pokud používáte)
-
-```nginx
-location /webrtc-audio {
-    proxy_pass http://backend;
-    proxy_http_version 1.1;
-    proxy_set_header Upgrade $http_upgrade;
-    proxy_set_header Connection "upgrade";
-    proxy_set_header Host $host;
-    proxy_cache_bypass $http_upgrade;
-    proxy_read_timeout 86400;
-}
-```
-
-## Testování
-
-### 1. Lokální testování
-
+### **Test 2: Session Creation**
 ```bash
-# Spuštění Python serveru
-python main.py
-
-# Spuštění Node.js serveru
-cd react-dashboard/backend
-npm start
-
-# Spuštění React frontend
-cd react-dashboard/frontend  
-npm start
-```
-
-### 2. WebRTC Demo
-
-Navštivte: `http://localhost:3000/webrtc-demo`
-
-### 3. Testovací hovory
-
-1. Zavolejte na vaše Twilio číslo
-2. Řekněte "WebRTC test"
-3. Ověřte připojení a kvalitu zvuku
-
-## Monitoring a Debugging
-
-### 1. Logy
-
-```bash
-# Python logy
-tail -f logs/webrtc.log
-
-# Node.js logy  
-tail -f logs/node.log
-
-# Browser console
-# Otevřete Developer Tools → Console
-```
-
-### 2. WebRTC Statistiky
-
-```javascript
-// V browser console
-const stats = await peerConnection.getStats();
-console.log(stats);
-```
-
-### 3. Diagnostické endpointy
-
-- `GET /webrtc/status/:callSid` - Status spojení
-- `GET /api/webrtc/diagnostics` - Systémové info
-- `GET /health` - Health check
-
-## Troubleshooting
-
-### Časté problémy
-
-1. **ICE Connection Failed**
-   - Zkontrolujte STUN servery
-   - Ověřte firewall nastavení
-   - Zkuste jiný prohlížeč
-
-2. **Audio Quality Issues**
-   - Zkontrolujte kodéky
-   - Ověřte bandwidth
-   - Zkuste jiné audio formáty
-
-3. **OpenAI Connection Timeout**
-   - Zkontrolujte API klíč
-   - Ověřte síťové připojení
-   - Zkontrolujte rate limits
-
-### Debug Commands
-
-```bash
-# Testování WebRTC podpory
-curl -X POST http://localhost:8000/webrtc/offer \
+curl -X POST https://lecture-webrtc-backend.up.railway.app/session \
   -H "Content-Type: application/json" \
-  -d '{"callSid": "test"}'
-
-# Testování OpenAI připojení
-python -c "
-import asyncio
-from app.services.webrtc_realtime_service import WebRTCRealtimeService
-async def test():
-    service = WebRTCRealtimeService()
-    await service.connect_to_openai('Test')
-    print('OpenAI OK')
-asyncio.run(test())
-"
+  -d '{"voice":"alloy"}'
 ```
 
-## Performance Optimizace
+### **Test 3: Twilio TwiML**
+```bash
+curl https://lecture-webrtc-backend.up.railway.app/twilio/voice
+```
+**Očekávaný výsledek**: XML s `<Connect><Stream>` pro WebSocket
 
-### 1. Server Optimizace
+### **Test 4: WebRTC z Dashboardu**
+1. **Otevřete React dashboard**
+2. **Users** → klikněte na telefon ikonku
+3. **WebRTC dialog** by se měl otevřít
+4. **"Spustit hovor"** → test WebRTC připojení
 
-```python
-# WebRTC service konfigurace
-rtc_config = RTCConfiguration(
-    iceServers=[
-        RTCIceServer(urls="stun:stun.l.google.com:19302"),
-        RTCIceServer(urls="turn:your-turn-server.com", 
-                    username="user", credential="pass")
-    ]
-)
+## 🔍 Troubleshooting
+
+### **Build Errors**
+```bash
+# Zkontrolujte logy v Railway dashboard
+# Častá chyba: missing dependencies
 ```
 
-### 2. Audio Kodéky
-
-Preferované kodéky pro nejlepší kvalitu:
-- Opus (nejlepší pro hlasové hovory)
-- G.722 (vysoká kvalita)
-- G.711 (kompatibilita s Twilio)
-
-### 3. Bandwidth Management
-
-```javascript
-// Omezení bandwidth
-const offer = await peerConnection.createOffer();
-offer.sdp = offer.sdp.replace(/b=AS:\d+/g, 'b=AS:64'); // 64 kbps
+### **Runtime Errors**
+```bash
+# Zkontrolujte že všechny env vars jsou nastavené
+# Zejména OPENAI_API_KEY a APP_BASE_URL
 ```
 
-## Migrace ze stávající implementace
-
-### 1. Postupná migrace
-
-1. Nasaďte WebRTC verzi paralelně
-2. Testujte s malým procentem hovorů
-3. Postupně přesměrujte veškerý traffic
-4. Odstraňte starou implementaci
-
-### 2. Fallback mechanismus
-
-```python
-# V případě selhání WebRTC, použijte WebSocket
-try:
-    webrtc_service = WebRTCRealtimeService()
-    await webrtc_service.connect_to_openai(context)
-except Exception:
-    # Fallback na WebSocket
-    websocket_service = OpenAIRealtimeService()
-    await websocket_service.connect_to_openai(context)
+### **WebSocket Connection Issues**
+```bash
+# Railway automaticky podporuje WebSocket
+# Ověřte že APP_BASE_URL je správná (bez trailing slash)
 ```
 
-## Bezpečnost
-
-### 1. HTTPS/WSS pouze
-
-```python
-# Vynutit HTTPS v produkci
-if not request.is_secure and settings.ENVIRONMENT == 'production':
-    return redirect(request.url.replace('http://', 'https://'))
+### **CORS Errors**
+```bash
+# Přidejte frontend URL do ALLOWED_ORIGINS
+# Nebo nastavte NODE_ENV=development pro dev režim
 ```
 
-### 2. CORS konfigurace
+## 📊 Monitoring
 
-```python
-from flask_cors import CORS
+### **Railway Logs**
+- **Deployment logs**: Build process
+- **Application logs**: Runtime eventy
+- **Metrics**: CPU, Memory, Network
 
-CORS(app, origins=[
-    "https://your-domain.com",
-    "https://webrtc.your-domain.com"
-])
+### **Klíčové Log Messages**
+```
+🚀 Server běží na portu 8080
+📡 WebSocket endpoint: wss://your-app/twilio/stream
+🔑 OpenAI API: sk-proj...
+🎧 WebSocket server ready for /twilio/stream
 ```
 
-### 3. Rate limiting
+## 🎯 Finální Architektura
 
-```python
-from flask_limiter import Limiter
+```
+📱 React Dashboard (Port 3000)
+    ↓ HTTP calls
+🌐 Node.js Dashboard Backend (Railway)
+    ↓ WebRTC calls  
+🎙️ Node.js WebRTC Backend (Railway) ← NOVÝ!
+    ↓ WebSocket
+🤖 OpenAI Realtime API
 
-limiter = Limiter(
-    app,
-    key_func=get_remote_address,
-    default_limits=["200 per day", "50 per hour"]
-)
-
-@app.route('/webrtc/offer')
-@limiter.limit("10 per minute")
-def create_offer():
-    # ...
+📞 Twilio Phone Number
+    ↓ Webhook
+🎙️ Node.js WebRTC Backend (Railway) ← NOVÝ!
+    ↓ WebSocket Bridge
+🤖 OpenAI Realtime API
 ```
 
-## Závěr
+## ✅ Success Checklist
 
-WebRTC implementace poskytuje významné zlepšení v latenci a kvalitě zvuku oproti stávajícímu WebSocket řešení. Postupná migrace a důkladné testování zajistí hladký přechod na novou technologii.
+- [ ] Railway service vytvořen
+- [ ] Environment variables nastavené  
+- [ ] Deployment úspěšný (zelený status)
+- [ ] Health check endpoint funguje
+- [ ] Session creation funguje
+- [ ] Twilio webhook aktualizován
+- [ ] Dashboard WebRTC dialog funguje
+- [ ] Telefonní hovor funguje s WebRTC
 
-Pro další podporu kontaktujte vývojový tým nebo vytvořte issue v GitHub repozitáři. 
+**Po dokončení budete mít plně funkční WebRTC systém! 🎉** 

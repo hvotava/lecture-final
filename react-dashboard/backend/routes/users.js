@@ -390,7 +390,7 @@ router.post('/:id/call', auth, adminOnly, async (req, res) => {
         console.log('🎯 FINAL WebRTC Voice URL:', `${statusBackendUrl}/api/twilio/webrtc/voice/incoming`);
 
         // Use local WebRTC endpoints (same server)
-        const baseUrl = process.env.APP_BASE_URL || `https://${req.get('host')}`;
+        const baseUrl = process.env.APP_BASE_URL || 'https://lecture-app-production-5f70.up.railway.app';
         
         const call = await twilioClient.calls.create({
           to: user.phone,

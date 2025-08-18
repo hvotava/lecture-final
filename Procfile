@@ -1,1 +1,1 @@
-web: python main.py 
+web: cd react-dashboard/backend && npm start 

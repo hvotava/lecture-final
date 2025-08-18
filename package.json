@@ -1,12 +1,16 @@
 {
-  "name": "lecture-consolidated-backend",
+  "name": "lecture-react-dashboard",
   "version": "1.0.0",
-  "description": "Consolidated Node.js backend (Dashboard + WebRTC)",
+  "description": "React Dashboard with Node.js backend",
   "main": "react-dashboard/backend/server.js",
   "scripts": {
-    "start": "cd react-dashboard/backend && npm start"
+    "install": "cd react-dashboard/frontend && npm install && cd ../backend && npm install",
+    "build": "cd react-dashboard/frontend && npm run build",
+    "start": "cd react-dashboard/backend && npm start",
+    "postinstall": "npm run build"
   },
   "engines": {
-    "node": "18.x"
+    "node": "18.x",
+    "npm": ">=8.0.0"
   }
 } 

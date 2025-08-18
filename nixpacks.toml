@@ -1,10 +1,10 @@
 [phases.setup]
-nixPkgs = ["nodejs_18", "npm"]
+nixPkgs = ["nodejs_18"]
 
 [phases.install]
 cmds = [
-    "cd react-dashboard/frontend && npm ci",
-    "cd react-dashboard/backend && npm ci --only=production"
+    "cd react-dashboard/frontend && npm install",
+    "cd react-dashboard/backend && npm install --only=production"
 ]
 
 [phases.build]

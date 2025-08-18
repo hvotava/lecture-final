@@ -1,15 +1,19 @@
 [providers]
-node = "18"
+node = "18.x"
 
 [phases.setup]
 nixPkgs = ["nodejs", "npm"]
-workDir = "react-dashboard/backend"
 
 [phases.install]
-cmd = "npm ci --only=production"
+dependsOn = ["setup"]
+cmds = [
+  "cd react-dashboard/backend",
+  "npm ci --only=production"
+]
 
 [phases.start]
-cmd = "npm start"
+dependsOn = ["install"]
+cmd = "cd react-dashboard/backend && npm start"
 
 [variables]
 NODE_ENV = "production" 

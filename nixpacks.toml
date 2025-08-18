@@ -1,8 +1,11 @@
+[phases.setup]
+workDir = "react-dashboard/backend"
+
 [build]
-cmd = "cd react-dashboard/backend && npm ci"
+cmd = "npm ci"
 
 [start]
-cmd = "cd react-dashboard/backend && npm start"
+cmd = "npm start"
 
 [variables]
 NODE_ENV = "production" 

@@ -4,6 +4,7 @@
   "description": "React Dashboard with Node.js backend",
   "main": "react-dashboard/backend/server.js",
   "scripts": {
+    "preinstall": "echo 'Installing dependencies...'",
     "install": "cd react-dashboard/frontend && npm install && cd ../backend && npm install",
     "build": "cd react-dashboard/frontend && CI=false npm run build",
     "start": "cd react-dashboard/backend && npm start",
@@ -12,5 +13,12 @@
   "engines": {
     "node": "18.x",
     "npm": ">=8.0.0"
-  }
+  },
+  "keywords": [
+    "nodejs",
+    "express",
+    "react",
+    "dashboard"
+  ],
+  "license": "ISC"
 } 

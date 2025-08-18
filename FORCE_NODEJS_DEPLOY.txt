@@ -1,6 +1,1 @@
-FORCE DEPLOY TO NODE.JS BACKEND
-Timestamp: 2025-08-18 06:55:00
-Config: react-dashboard/backend
-Build: npm ci
-Start: npm start
-Target: WebRTC + OpenAI Realtime API 
+FORCE_NODEJS_ONLY_1755506874

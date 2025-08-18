@@ -1,0 +1,24 @@
+{
+  "providers": ["node"],
+  "buildpack": null,
+  "phases": {
+    "setup": {
+      "nixPkgs": ["nodejs_18"]
+    },
+    "install": {
+      "cmds": [
+        "cd react-dashboard/frontend && npm install",
+        "cd react-dashboard/backend && npm install --only=production"
+      ]
+    },
+    "build": {
+      "cmds": [
+        "cd react-dashboard/frontend && npm run build",
+        "echo 'Frontend build completed'"
+      ]
+    }
+  },
+  "start": {
+    "cmd": "cd react-dashboard/backend && npm start"
+  }
+} 

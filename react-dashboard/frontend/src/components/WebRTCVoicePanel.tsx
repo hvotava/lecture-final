@@ -44,7 +44,7 @@ interface WebRTCVoicePanelProps {
 export const WebRTCVoicePanel: React.FC<WebRTCVoicePanelProps> = ({
   userId,
   userName,
-  backendUrl = process.env.REACT_APP_BACKEND_URL || 'http://localhost:5000',
+  backendUrl = process.env.REACT_APP_BACKEND_URL || window.location.origin,
   onError,
   onStatusChange,
   onCallStart,

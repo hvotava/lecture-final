@@ -1,0 +1,12 @@
+{
+  "name": "lecture-consolidated-backend",
+  "version": "1.0.0",
+  "description": "Consolidated Node.js backend (Dashboard + WebRTC)",
+  "main": "react-dashboard/backend/server.js",
+  "scripts": {
+    "start": "cd react-dashboard/backend && npm start"
+  },
+  "engines": {
+    "node": "18.x"
+  }
+} 

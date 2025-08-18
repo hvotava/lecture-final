@@ -154,7 +154,6 @@ router.get('/voice', (req, res) => {
     <Stream 
       name="openai_realtime_stream"
       url="${wsUrl}"
-      track="both_tracks"
     />
   </Connect>
 </Response>`;
@@ -190,7 +189,6 @@ router.post('/voice', (req, res) => {
     <Stream 
       name="openai_realtime_stream"
       url="${wsUrl}"
-      track="both_tracks"
     />
   </Connect>
 </Response>`;
@@ -207,14 +205,16 @@ router.post('/voice', (req, res) => {
  * Twilio status callback webhook
  */
 router.post('/status', (req, res) => {
-  const { CallSid, CallStatus, Duration } = req.body;
-  const requestId = req.headers['x-request-id'] || `status_${Date.now()}`;
-  
-  console.log(`[${requestId}] 📊 Call status update:`, { 
-    CallSid, 
-    CallStatus, 
-    Duration: Duration ? `${Duration}s` : 'N/A'
-  });
+  try {
+    const { CallSid, CallStatus, Duration } = req.body;
+    const requestId = req.headers['x-request-id'] || `status_${Date.now()}`;
+    
+    console.log(`[${requestId}] 📊 Call status update:`, { 
+      CallSid, 
+      CallStatus, 
+      Duration: Duration ? `${Duration}s` : 'N/A'
+    });
+    console.log(`[${requestId}] 📋 Full request body:`, req.body);
 
   // Log important status changes
   switch (CallStatus) {
@@ -236,6 +236,10 @@ router.post('/status', (req, res) => {
 
   // Twilio očekává 200 OK response
   res.status(200).send('OK');
+  } catch (error) {
+    console.error('❌ Status webhook error:', error);
+    res.status(500).send('Error');
+  }
 });
 
 /**

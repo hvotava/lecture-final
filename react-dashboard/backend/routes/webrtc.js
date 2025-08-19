@@ -21,17 +21,19 @@ router.get('/stream', (req, res) => {
  * Express-WS automatically handles this
  */
 router.ws('/stream', (ws, req) => {
-  const sessionId = `session_${Date.now()}_${Math.random().toString(36).slice(2)}`;
-  console.log(`🔗 [${sessionId}] NEW Twilio WebSocket connected via Express-WS`);
-  console.log(`🔗 [${sessionId}] Request URL:`, req.url);
+  const sessionId = `session_${Date.now()}_${Math.random().toString(36).slice(2)}_${process.hrtime.bigint()}`;
+  console.log(`🔗🆕 [${sessionId}] BRAND NEW Twilio WebSocket connected via Express-WS`);
+  console.log(`🔗🆕 [${sessionId}] Request URL:`, req.url);
+  console.log(`🔗🆕 [${sessionId}] Connection timestamp:`, new Date().toISOString());
   
-  // Reset state for each new WebSocket connection
+  // FORCE reset state for each new WebSocket connection
   let openaiSession = null;
   let openaiWs = null;
   let streamSid = null;
   let isOpenAIInitialized = false;
   
-  console.log(`🔄 [${sessionId}] Initialized fresh state - isOpenAIInitialized:`, isOpenAIInitialized);
+  console.log(`🔄🆕 [${sessionId}] FORCE RESET fresh state - isOpenAIInitialized:`, isOpenAIInitialized);
+  console.log(`🔄🆕 [${sessionId}] All variables reset: openaiSession=${openaiSession}, openaiWs=${openaiWs}, streamSid=${streamSid}`);
   
   // Initialize OpenAI Session using Sessions API (same as WebRTC dialog)
   const initializeOpenAI = async () => {

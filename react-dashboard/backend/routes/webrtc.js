@@ -144,6 +144,7 @@ router.ws('/stream', (ws, req) => {
           
         case 'media':
           console.log(`🎵 [${sessionId}] Audio data received`);
+          console.log(`🔍 [${sessionId}] isOpenAIInitialized:`, isOpenAIInitialized, 'streamSid:', data.streamSid);
           
           // Initialize OpenAI on first media event if not already done
           if (!isOpenAIInitialized && data.streamSid) {

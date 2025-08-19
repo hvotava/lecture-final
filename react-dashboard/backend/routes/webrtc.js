@@ -11,13 +11,16 @@ const router = express.Router();
  */
 router.ws('/stream', (ws, req) => {
   const sessionId = `session_${Date.now()}_${Math.random().toString(36).slice(2)}`;
-  console.log(`🔗 [${sessionId}] Twilio WebSocket connected via Express-WS`);
+  console.log(`🔗 [${sessionId}] NEW Twilio WebSocket connected via Express-WS`);
   console.log(`🔗 [${sessionId}] Request URL:`, req.url);
   
+  // Reset state for each new WebSocket connection
   let openaiSession = null;
   let openaiWs = null;
   let streamSid = null;
   let isOpenAIInitialized = false;
+  
+  console.log(`🔄 [${sessionId}] Initialized fresh state - isOpenAIInitialized:`, isOpenAIInitialized);
   
   // Initialize OpenAI Session using Sessions API (same as WebRTC dialog)
   const initializeOpenAI = async () => {
@@ -149,12 +152,16 @@ router.ws('/stream', (ws, req) => {
           // Initialize OpenAI on first media event if not already done
           if (!isOpenAIInitialized && data.streamSid) {
             streamSid = data.streamSid;
-            console.log(`▶️ [${sessionId}] First media event - initializing OpenAI with streamSid:`, streamSid);
+            console.log(`▶️ [${sessionId}] FIRST MEDIA EVENT - initializing OpenAI with streamSid:`, streamSid);
             console.log(`🔑 [${sessionId}] OpenAI API key available:`, process.env.OPENAI_API_KEY ? 'YES' : 'NO');
             console.log(`🚀 [${sessionId}] About to call initializeOpenAI()...`);
             isOpenAIInitialized = true;
             initializeOpenAI();
             console.log(`✅ [${sessionId}] initializeOpenAI() called`);
+          } else if (isOpenAIInitialized) {
+            console.log(`⚠️ [${sessionId}] OpenAI already initialized, skipping`);
+          } else {
+            console.log(`⚠️ [${sessionId}] No streamSid in media event:`, data.streamSid);
           }
           
           // Forward audio to OpenAI

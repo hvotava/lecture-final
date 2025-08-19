@@ -6,6 +6,17 @@ const { parse } = require('url');
 const router = express.Router();
 
 /**
+ * Test endpoint to check if routes work
+ */
+router.get('/stream', (req, res) => {
+  res.json({ 
+    status: 'WebSocket endpoint accessible',
+    timestamp: new Date().toISOString(),
+    note: 'This should be a WebSocket endpoint, but testing HTTP first'
+  });
+});
+
+/**
  * WebSocket route for Twilio Media Stream
  * Express-WS automatically handles this
  */

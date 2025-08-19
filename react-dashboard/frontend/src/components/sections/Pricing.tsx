@@ -18,13 +18,15 @@ const plans = {
     label: 'Free', 
     priceEUR: 0, 
     minSeats: 1,
-    description: 'Pro solo testování MVP'
+    description: 'Pro solo testování MVP',
+    recommended: false
   },
   starter: { 
     label: 'Starter', 
     priceEUR: 12, 
     minSeats: 5,
-    description: 'Malé týmy, pilot'
+    description: 'Malé týmy, pilot',
+    recommended: false
   },
   pro: { 
     label: 'Pro', 
@@ -39,7 +41,8 @@ const plans = {
     platformFeeEUR: 1000, 
     priceNote: 'od €45–65 / uživ. + €1 000 platforma', 
     minSeats: 100,
-    description: 'Velké firmy, compliance'
+    description: 'Velké firmy, compliance',
+    recommended: false
   },
 } as const;
 

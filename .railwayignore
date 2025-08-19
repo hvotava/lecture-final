@@ -54,15 +54,10 @@ Thumbs.db
 tmp/
 temp/
 
-# Build artifacts (will be rebuilt on Railway)
-react-dashboard/frontend/build/
-# BUT keep public folder for build process
-!react-dashboard/frontend/public/
+# Git
+.git/
+.gitignore
 
 # Documentation
 *.md
-!README.md
-
-# Git
-.git/
-.gitignore 
+!README.md 

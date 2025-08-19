@@ -1,0 +1,8 @@
+# Railway explicit includes
+react-dashboard/frontend/public/
+react-dashboard/frontend/src/
+react-dashboard/backend/
+package.json
+package-lock.json
+railway.json
+.npmrc 

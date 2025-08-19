@@ -31,6 +31,8 @@ router.ws('/stream', (ws, req) => {
   let openaiWs = null;
   let streamSid = null;
   let isOpenAIInitialized = false;
+  let streamStartTime = null;
+  let openaiConnectedTime = null;
   
   console.log(`🔄🆕 [${sessionId}] FORCE RESET fresh state - isOpenAIInitialized:`, isOpenAIInitialized);
   console.log(`🔄🆕 [${sessionId}] All variables reset: openaiSession=${openaiSession}, openaiWs=${openaiWs}, streamSid=${streamSid}`);
@@ -99,7 +101,14 @@ router.ws('/stream', (ws, req) => {
       openaiWs = new WebSocket(wsUrl);
       
       openaiWs.on('open', () => {
+        openaiConnectedTime = Date.now();
         console.log(`🤖 [${sessionId}] OpenAI WebSocket connected to session:`, openaiSession.id);
+        console.log(`⏰ [${sessionId}] OpenAI connected at:`, new Date(openaiConnectedTime).toISOString());
+        
+        if (streamStartTime) {
+          const connectionDelay = (openaiConnectedTime - streamStartTime) / 1000;
+          console.log(`⏰ [${sessionId}] OpenAI connection took: ${connectionDelay}s from stream start`);
+        }
       });
       
       openaiWs.on('message', (data) => {
@@ -158,23 +167,36 @@ router.ws('/stream', (ws, req) => {
           console.log(`✅ [${sessionId}] initializeOpenAI() called`);
           break;
           
-        case 'media':
-          console.log(`🎵 [${sessionId}] Audio data received`);
-          console.log(`🔍 [${sessionId}] isOpenAIInitialized:`, isOpenAIInitialized, 'streamSid:', data.streamSid);
+        case 'start':
+          streamSid = data.streamSid;
+          streamStartTime = Date.now();
+          console.log(`▶️ [${sessionId}] STREAM START EVENT - streamSid:`, streamSid);
+          console.log(`⏰ [${sessionId}] Stream start time:`, new Date(streamStartTime).toISOString());
+          console.log(`🔑 [${sessionId}] OpenAI API key available:`, process.env.OPENAI_API_KEY ? 'YES' : 'NO');
           
-          // Initialize OpenAI on first media event if not already done
-          if (!isOpenAIInitialized && data.streamSid) {
-            streamSid = data.streamSid;
-            console.log(`▶️ [${sessionId}] FIRST MEDIA EVENT - initializing OpenAI with streamSid:`, streamSid);
-            console.log(`🔑 [${sessionId}] OpenAI API key available:`, process.env.OPENAI_API_KEY ? 'YES' : 'NO');
-            console.log(`🚀 [${sessionId}] About to call initializeOpenAI()...`);
+          if (!isOpenAIInitialized) {
+            console.log(`🚀 [${sessionId}] Initializing OpenAI on STREAM START...`);
             isOpenAIInitialized = true;
             initializeOpenAI();
-            console.log(`✅ [${sessionId}] initializeOpenAI() called`);
-          } else if (isOpenAIInitialized) {
-            console.log(`⚠️ [${sessionId}] OpenAI already initialized, skipping`);
+            console.log(`✅ [${sessionId}] OpenAI initialization triggered`);
           } else {
-            console.log(`⚠️ [${sessionId}] No streamSid in media event:`, data.streamSid);
+            console.log(`⚠️ [${sessionId}] OpenAI already initialized, skipping`);
+          }
+          break;
+          
+        case 'media':
+          // Only log occasionally to avoid spam
+          if (Math.random() < 0.01) { // Log ~1% of media events
+            console.log(`🎵 [${sessionId}] Audio data received (streamSid: ${data.streamSid})`);
+          }
+          
+          // Fallback: Initialize on first media if no start event received
+          if (!isOpenAIInitialized && data.streamSid) {
+            streamSid = data.streamSid;
+            console.log(`⚠️ [${sessionId}] FALLBACK: No start event, initializing on first media`);
+            console.log(`🔑 [${sessionId}] OpenAI API key available:`, process.env.OPENAI_API_KEY ? 'YES' : 'NO');
+            isOpenAIInitialized = true;
+            initializeOpenAI();
           }
           
           // Forward audio to OpenAI
@@ -188,7 +210,17 @@ router.ws('/stream', (ws, req) => {
           break;
           
         case 'stop':
+          const streamEndTime = Date.now();
+          const streamDuration = streamStartTime ? (streamEndTime - streamStartTime) / 1000 : 'unknown';
           console.log(`⏹️ [${sessionId}] Stream stopped`);
+          console.log(`⏰ [${sessionId}] Stream duration: ${streamDuration}s`);
+          console.log(`⏰ [${sessionId}] OpenAI connected time: ${openaiConnectedTime ? new Date(openaiConnectedTime).toISOString() : 'never'}`);
+          
+          if (openaiConnectedTime && streamStartTime) {
+            const openaiDelay = (openaiConnectedTime - streamStartTime) / 1000;
+            console.log(`⏰ [${sessionId}] OpenAI connection delay: ${openaiDelay}s`);
+          }
+          
           if (openaiWs) {
             openaiWs.close();
           }

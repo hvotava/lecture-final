@@ -121,19 +121,37 @@ router.ws('/stream', (ws, req) => {
       openaiWs.on('message', (data) => {
         try {
           const event = JSON.parse(data);
-          console.log(`🤖 [${sessionId}] OpenAI event:`, event.type);
+          
+          // Log important events with details
+          if (event.type === 'response.audio.delta') {
+            console.log(`🔊 [${sessionId}] OpenAI audio delta (${event.delta?.length || 0} bytes)`);
+          } else if (event.type === 'input_audio_buffer.speech_started') {
+            console.log(`🎙️ [${sessionId}] User started speaking`);
+          } else if (event.type === 'input_audio_buffer.speech_stopped') {
+            console.log(`🔇 [${sessionId}] User stopped speaking`);
+          } else if (event.type === 'response.audio.done') {
+            console.log(`✅ [${sessionId}] OpenAI finished speaking`);
+          } else if (event.type === 'error') {
+            console.log(`❌ [${sessionId}] OpenAI error:`, event);
+          } else {
+            console.log(`🤖 [${sessionId}] OpenAI event:`, event.type, event);
+          }
           
           if (event.type === 'response.audio.delta' && event.delta && streamSid) {
-            // Send audio back to Twilio
-            const audioMessage = {
-              event: 'media',
-              streamSid: streamSid,
-              media: {
-                payload: event.delta
-              }
-            };
-            ws.send(JSON.stringify(audioMessage));
-            console.log(`🔊 [${sessionId}] Sent audio to Twilio`);
+            if (ws.readyState === WebSocket.OPEN) {
+              // Send audio back to Twilio
+              const audioMessage = {
+                event: 'media',
+                streamSid: streamSid,
+                media: {
+                  payload: event.delta
+                }
+              };
+              ws.send(JSON.stringify(audioMessage));
+              console.log(`📤 [${sessionId}] Sent ${event.delta.length} bytes audio to Twilio`);
+            } else {
+              console.log(`⚠️ [${sessionId}] Cannot send audio - Twilio WebSocket closed`);
+            }
           }
         } catch (error) {
           console.error(`❌ [${sessionId}] Error processing OpenAI message:`, error);
@@ -222,6 +240,13 @@ router.ws('/stream', (ws, req) => {
               audio: data.media.payload
             };
             openaiWs.send(JSON.stringify(audioEvent));
+            
+            // Log occasionally to verify audio flow
+            if (Math.random() < 0.001) { // Very rarely
+              console.log(`📤 [${sessionId}] Forwarded ${data.media.payload.length} bytes audio to OpenAI`);
+            }
+          } else if (isOpenAIInitialized) {
+            console.log(`⚠️ [${sessionId}] Cannot forward audio - OpenAI WebSocket not ready (state: ${openaiWs?.readyState})`);
           }
           break;
           

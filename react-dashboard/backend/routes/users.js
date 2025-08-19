@@ -361,7 +361,7 @@ router.post('/:id/call', auth, adminOnly, async (req, res) => {
         const baseUrl = process.env.APP_BASE_URL || 'https://lecture-app-production-5f70.up.railway.app';
         console.log('🔍 Using base URL for all Twilio webhooks:', baseUrl);
         
-        const webhookUrl = `${baseUrl}/api/twilio/voice`;  // CHANGED: use twilio route (we redirected it)
+        const webhookUrl = `${baseUrl}/api/webrtc/voice`;  // BACK TO WEBRTC: Twilio Console probably has this URL
         const statusUrl = `${baseUrl}/api/webrtc/status`;
         
         console.log(`🔗 Twilio webhook URLs:`);

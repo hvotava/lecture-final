@@ -50,351 +50,315 @@ interface StatCardProps {
   change?: string;
 }
 
-// Responsive Stat Card Component
+// Unified Stat Card Component
 const StatCard: React.FC<StatCardProps> = ({ title, value, icon, color, change }) => {
-  const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
-  
   return (
-    <Card 
-      sx={{ 
-        height: '100%', 
-        position: 'relative', 
-        overflow: 'visible',
-        border: `2px solid ${color}20`,
-        '&:hover': {
-          transform: 'translateY(-4px)',
-          boxShadow: theme.shadows[8],
-          transition: 'all 0.3s ease-in-out',
-        }
-      }}
-    >
-      <CardContent sx={{ p: { xs: 2, sm: 3 } }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <Box sx={{ flex: 1 }}>
-            <Typography 
-              variant="body2" 
-              color="text.secondary" 
-              sx={{ 
-                fontSize: { xs: '0.8rem', sm: '0.9rem' },
-                mb: 1,
-                fontWeight: 500
-              }}
-            >
+    <div className="card hover:shadow-lg transition-all duration-300 hover:-translate-y-1">
+      <div className="card-body">
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex-1">
+            <p className="text-small text-muted font-medium mb-2">
               {title}
-            </Typography>
-            <Typography 
-              variant="h4" 
-              sx={{ 
-                fontWeight: 700, 
-                color: color,
-                fontSize: { xs: '1.8rem', sm: '2.2rem' },
-                mb: change ? 0.5 : 0
-              }}
-            >
+            </p>
+            <h3 className="heading heading-3 font-bold mb-1" style={{ color }}>
               {value}
-            </Typography>
+            </h3>
             {change && (
-              <Typography 
-                variant="body2" 
-                sx={{ 
-                  color: change.startsWith('+') ? 'success.main' : 'error.main',
-                  fontSize: { xs: '0.75rem', sm: '0.8rem' },
-                  fontWeight: 600
-                }}
-              >
-                {change} za 30 dní
-              </Typography>
+              <p className="text-small" style={{ 
+                color: change.startsWith('+') ? 'var(--success)' : 'var(--error)' 
+              }}>
+                {change}
+              </p>
             )}
-          </Box>
-          <Box
-            sx={{
-              backgroundColor: `${color}15`,
-              borderRadius: '50%',
-              p: { xs: 1.5, sm: 2 },
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              minWidth: { xs: 48, sm: 56 },
-              minHeight: { xs: 48, sm: 56 },
-            }}
+          </div>
+          <div 
+            className="w-12 h-12 rounded-xl flex items-center justify-center"
+            style={{ backgroundColor: `${color}20` }}
           >
-            {React.cloneElement(icon as React.ReactElement, {
-              sx: { 
-                color: color, 
-                fontSize: { xs: 24, sm: 32 } 
-              }
-            })}
-          </Box>
-        </Box>
-      </CardContent>
-    </Card>
+            <span style={{ color }} className="text-xl">
+              {icon}
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
   );
 };
 
+// Chart colors matching theme
+const CHART_COLORS = ['#FF7A00', '#0D1B2A', '#6366f1', '#f59e0b', '#10b981'];
+
 const Dashboard: React.FC = () => {
-  const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const { user } = useAuth();
-  
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Kontrola oprávnění - pouze admin
-  const isAdmin = user?.role === 'admin';
+  // Import theme CSS
+  React.useEffect(() => {
+    const style = document.createElement('style');
+    style.textContent = `@import url('/src/ui/theme.css');`;
+    document.head.appendChild(style);
+    return () => document.head.removeChild(style);
+  }, []);
 
   useEffect(() => {
-    console.log('🔍 Dashboard useEffect - User data:', user);
-    console.log('🔍 Dashboard useEffect - isAdmin:', isAdmin);
-    console.log('🔍 Dashboard useEffect - user?.role:', user?.role);
-    
-    if (!isAdmin) {
-      console.log('❌ Dashboard access denied - user is not admin');
-      setError('Přístup k Dashboard je povolen pouze administrátorům');
-      setLoading(false);
-      return;
-    }
-
-    console.log('✅ Dashboard access granted - calling fetchDashboardStats');
-    fetchDashboardStats();
-  }, [isAdmin]);
-
-  const fetchDashboardStats = async () => {
-    try {
-      setLoading(true);
-      console.log('🔍 Fetching dashboard stats...');
-      
-      // Debug info first
+    const fetchDashboardStats = async () => {
       try {
-        const debugResponse = await dashboardAPI.getDebug();
-        console.log('🔍 Debug info:', debugResponse.data);
-      } catch (debugError) {
-        console.error('🔍 Debug error:', debugError);
+        setLoading(true);
+        const data = await dashboardAPI.getStats();
+        setStats(data);
+      } catch (error) {
+        console.error('Chyba při načítání dashboard stats:', error);
+        setError('Nepodařilo se načíst statistiky dashboardu');
+      } finally {
+        setLoading(false);
       }
-      
-      const response = await dashboardAPI.getStats();
-      console.log('📊 Dashboard stats response:', response);
-      setStats(response.data);
-      setError(null);
-    } catch (err: any) {
-      console.error('Error fetching dashboard stats:', err);
-      console.error('Error response:', err.response?.data);
-      console.error('Error status:', err.response?.status);
-      
-      let errorMessage = 'Nepodařilo se načíst statistiky';
-      if (err.response?.status === 403) {
-        errorMessage = 'Nemáte oprávnění pro přístup k dashboard statistikám';
-      } else if (err.response?.status === 401) {
-        errorMessage = 'Nejste přihlášen nebo vypršela vaše relace';
-      } else if (err.response?.data?.error) {
-        errorMessage = err.response.data.error;
-      }
-      
-      setError(errorMessage);
-    } finally {
-      setLoading(false);
-    }
-  };
+    };
 
-  if (!isAdmin) {
-    return (
-      <Box sx={{ p: 3 }}>
-        <Alert severity="error">
-          Dashboard je přístupný pouze administrátorům systému.
-        </Alert>
-      </Box>
-    );
-  }
+    fetchDashboardStats();
+  }, []);
 
   if (loading) {
     return (
-      <Box sx={{ p: 3, display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: 400 }}>
-        <Typography>Načítám dashboard...</Typography>
-      </Box>
+      <div className="container mx-auto p-6">
+        <div className="flex items-center justify-center min-h-[400px]">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-accent"></div>
+        </div>
+      </div>
     );
   }
 
-  if (error || !stats) {
+  if (error) {
     return (
-      <Box sx={{ p: 3 }}>
-        <Alert severity="error" action={
-          <button onClick={fetchDashboardStats}>Zkusit znovu</button>
-        }>
-          {error || 'Nepodařilo se načíst data'}
-        </Alert>
-      </Box>
+      <div className="container mx-auto p-6">
+        <div className="bg-error/10 border border-error/20 rounded-lg p-4 text-error">
+          {error}
+        </div>
+      </div>
     );
   }
 
-  // Definice karet s daty ze serveru
-  const statCards = [
-    {
-      title: 'Celkem uživatelů',
-      value: stats.overview.totalUsers,
-      icon: <PeopleIcon />,
-      color: theme.palette.primary.main,
-      change: stats.growth.usersGrowth
-    },
-    {
-      title: 'Společnosti',
-      value: stats.overview.totalCompanies,
-      icon: <BusinessIcon />,
-      color: theme.palette.success.main,
-    },
-    {
-      title: 'Školení',
-      value: stats.overview.totalTrainings,
-      icon: <SchoolIcon />,
-      color: theme.palette.warning.main,
-      change: stats.growth.trainingsGrowth
-    },
-    {
-      title: 'Lekce',
-      value: stats.overview.totalLessons,
-      icon: <LessonIcon />,
-      color: theme.palette.info.main,
-    },
-    {
-      title: 'Testy',
-      value: stats.overview.totalTests,
-      icon: <QuizIcon />,
-      color: theme.palette.secondary.main,
-    }
-  ];
-
-  // Barvy pro pie chart
-  const COLORS = ['#8884d8', '#82ca9d', '#ffc658', '#ff7300', '#8dd1e1'];
+  if (!stats) {
+    return (
+      <div className="container mx-auto p-6">
+        <div className="text-center text-muted">
+          Žádná data k zobrazení
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <Box sx={{ p: { xs: 2, sm: 3 } }}>
+    <div className="space-y-6">
       {/* Header */}
-      <Box sx={{ mb: 4 }}>
-        <Typography variant="h4" sx={{ mb: 1, fontWeight: 600 }}>
-          📊 Admin Dashboard
-        </Typography>
-        <Typography variant="body1" color="text.secondary">
-          Přehled systému a klíčových metrik
-        </Typography>
-      </Box>
+      <div className="mb-8">
+        <h1 className="heading heading-1 text-primary mb-2">
+          Dashboard
+        </h1>
+        <p className="text-large text-muted">
+          Vítejte zpět, {user?.username}! Zde je přehled vašeho systému.
+        </p>
+      </div>
 
       {/* Stats Cards */}
-      <Grid container spacing={{ xs: 2, sm: 3 }} sx={{ mb: { xs: 3, sm: 4 } }}>
-        {statCards.map((card, index) => (
-          <Grid key={index} xs={12} sm={6} lg={2.4}>
-            <StatCard {...card} />
-          </Grid>
-        ))}
-      </Grid>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-6 mb-8">
+        <StatCard
+          title="Celkem uživatelů"
+          value={stats.overview.totalUsers.toLocaleString()}
+          icon={<PeopleIcon />}
+          color="#6366f1"
+          change={stats.growth.usersGrowth}
+        />
+        <StatCard
+          title="Společnosti"
+          value={stats.overview.totalCompanies.toLocaleString()}
+          icon={<BusinessIcon />}
+          color="#f59e0b"
+        />
+        <StatCard
+          title="Školení"
+          value={stats.overview.totalTrainings.toLocaleString()}
+          icon={<SchoolIcon />}
+          color="#10b981"
+          change={stats.growth.trainingsGrowth}
+        />
+        <StatCard
+          title="Lekce"
+          value={stats.overview.totalLessons.toLocaleString()}
+          icon={<LessonIcon />}
+          color="#8b5cf6"
+        />
+        <StatCard
+          title="Testy"
+          value={stats.overview.totalTests.toLocaleString()}
+          icon={<QuizIcon />}
+          color="#ef4444"
+        />
+        <StatCard
+          title="Aktivita"
+          value={stats.overview.recentUsers.toLocaleString()}
+          icon={<TrendingUpIcon />}
+          color="#FF7A00"
+        />
+      </div>
 
       {/* Charts Section */}
-      <Grid container spacing={{ xs: 2, sm: 3 }}>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
         {/* Activity Chart */}
-        <Grid xs={12} lg={8}>
-          <Paper sx={{ 
-            p: { xs: 2, sm: 3 }, 
-            height: { xs: 300, sm: 400 },
-            '& .recharts-wrapper': {
-              '& .recharts-cartesian-axis-tick-value': {
-                fontSize: { xs: '10px', sm: '12px' }
-              }
-            }
-          }}>
-            <Typography variant="h6" sx={{ mb: 2, display: 'flex', alignItems: 'center' }}>
-              <TrendingUpIcon sx={{ mr: 1 }} />
-              Aktivita za posledních 7 dní
-            </Typography>
-            <ResponsiveContainer width="100%" height="85%">
-              <LineChart data={stats.activityChart}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis 
-                  dataKey="date" 
-                  fontSize={isMobile ? 10 : 12}
-                  tickFormatter={(value) => new Date(value).toLocaleDateString('cs-CZ', { month: 'short', day: 'numeric' })}
-                />
-                <YAxis fontSize={isMobile ? 10 : 12} />
-                <Tooltip 
-                  labelFormatter={(value) => new Date(value).toLocaleDateString('cs-CZ')}
-                />
-                <Line 
-                  type="monotone" 
-                  dataKey="users" 
-                  stroke={theme.palette.primary.main} 
-                  strokeWidth={2}
-                  name="Noví uživatelé"
-                />
-                <Line 
-                  type="monotone" 
-                  dataKey="trainings" 
-                  stroke={theme.palette.warning.main} 
-                  strokeWidth={2}
-                  name="Nová školení"
-                />
-              </LineChart>
-            </ResponsiveContainer>
-          </Paper>
-        </Grid>
+        <div className="card">
+          <div className="card-header">
+            <h3 className="heading heading-4 text-primary">Aktivita v čase</h3>
+            <p className="text-small text-muted">Denní statistiky za posledních 30 dní</p>
+          </div>
+          <div className="card-body">
+            <div className="h-80">
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={stats.activityChart}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                  <XAxis 
+                    dataKey="date" 
+                    stroke="#64748b"
+                    fontSize={12}
+                  />
+                  <YAxis stroke="#64748b" fontSize={12} />
+                  <Tooltip 
+                    contentStyle={{
+                      backgroundColor: 'white',
+                      border: '1px solid #e2e8f0',
+                      borderRadius: '8px',
+                      boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'
+                    }}
+                  />
+                  <Line 
+                    type="monotone" 
+                    dataKey="users" 
+                    stroke="#6366f1" 
+                    strokeWidth={2}
+                    name="Uživatelé"
+                  />
+                  <Line 
+                    type="monotone" 
+                    dataKey="trainings" 
+                    stroke="#10b981" 
+                    strokeWidth={2}
+                    name="Školení"
+                  />
+                  <Line 
+                    type="monotone" 
+                    dataKey="tests" 
+                    stroke="#ef4444" 
+                    strokeWidth={2}
+                    name="Testy"
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+        </div>
 
         {/* Users by Role Chart */}
-        <Grid xs={12} lg={4}>
-          <Paper sx={{ p: { xs: 2, sm: 3 }, height: { xs: 300, sm: 400 } }}>
-            <Typography variant="h6" sx={{ mb: 2 }}>
-              Uživatelé podle rolí
-            </Typography>
-            <ResponsiveContainer width="100%" height="85%">
-              <PieChart>
-                <Pie
-                  data={stats.usersByRole}
-                  cx="50%"
-                  cy="50%"
-                  labelLine={false}
-                  label={({ role, count, percent }) => 
-                    isMobile ? `${(percent * 100).toFixed(0)}%` : `${role}: ${count}`
-                  }
-                  outerRadius={isMobile ? 60 : 80}
-                  fill="#8884d8"
-                  dataKey="count"
-                  nameKey="role"
-                >
-                  {stats.usersByRole.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                  ))}
-                </Pie>
-                <Tooltip />
-              </PieChart>
-            </ResponsiveContainer>
-          </Paper>
-        </Grid>
+        <div className="card">
+          <div className="card-header">
+            <h3 className="heading heading-4 text-primary">Uživatelé podle rolí</h3>
+            <p className="text-small text-muted">Rozložení uživatelů v systému</p>
+          </div>
+          <div className="card-body">
+            <div className="h-80">
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={stats.usersByRole}
+                    cx="50%"
+                    cy="50%"
+                    labelLine={false}
+                    label={({ role, count, percent }) => `${role}: ${count} (${(percent * 100).toFixed(0)}%)`}
+                    outerRadius={80}
+                    fill="#8884d8"
+                    dataKey="count"
+                  >
+                    {stats.usersByRole.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} />
+                    ))}
+                  </Pie>
+                  <Tooltip 
+                    contentStyle={{
+                      backgroundColor: 'white',
+                      border: '1px solid #e2e8f0',
+                      borderRadius: '8px',
+                      boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'
+                    }}
+                  />
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+        </div>
+      </div>
 
-        {/* Top Companies */}
-        <Grid xs={12}>
-          <Paper sx={{ p: { xs: 2, sm: 3 } }}>
-            <Typography variant="h6" sx={{ mb: 2 }}>
-              Top 5 společností podle počtu uživatelů
-            </Typography>
-            <Grid container spacing={2}>
-              {stats.topCompanies.map((company, index) => (
-                <Grid key={company.id} xs={12} sm={6} md={2.4}>
-                  <Card variant="outlined">
-                    <CardContent sx={{ textAlign: 'center', p: 2 }}>
-                      <Typography variant="h6" color="primary" sx={{ mb: 1 }}>
-                        #{index + 1}
-                      </Typography>
-                      <Typography variant="body1" sx={{ mb: 1, fontWeight: 500 }}>
-                        {company.name}
-                      </Typography>
-                      <Typography variant="h5" color="text.secondary">
-                        {company.userCount} uživatelů
-                      </Typography>
-                    </CardContent>
-                  </Card>
-                </Grid>
-              ))}
-            </Grid>
-          </Paper>
-        </Grid>
-      </Grid>
-    </Box>
+      {/* Top Companies */}
+      <div className="card">
+        <div className="card-header">
+          <h3 className="heading heading-4 text-primary">Top společnosti</h3>
+          <p className="text-small text-muted">Společnosti s nejvíce uživateli</p>
+        </div>
+        <div className="card-body">
+          <div className="space-y-4">
+            {stats.topCompanies.map((company, index) => (
+              <div key={company.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                <div className="flex items-center gap-3">
+                  <div 
+                    className="w-8 h-8 rounded-full flex items-center justify-center text-white font-medium text-sm"
+                    style={{ backgroundColor: CHART_COLORS[index % CHART_COLORS.length] }}
+                  >
+                    {index + 1}
+                  </div>
+                  <div>
+                    <h4 className="text-medium font-medium text-primary">
+                      {company.name}
+                    </h4>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <span className="text-large font-semibold text-primary">
+                    {company.userCount}
+                  </span>
+                  <p className="text-small text-muted">uživatelů</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Quick Actions */}
+      <div className="card">
+        <div className="card-header">
+          <h3 className="heading heading-4 text-primary">Rychlé akce</h3>
+          <p className="text-small text-muted">Často používané funkce</p>
+        </div>
+        <div className="card-body">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <button className="btn btn-primary focus-ring">
+              <PeopleIcon className="w-4 h-4" />
+              Nový uživatel
+            </button>
+            <button className="btn btn-secondary focus-ring">
+              <SchoolIcon className="w-4 h-4" />
+              Nové školení
+            </button>
+            <button className="btn btn-secondary focus-ring">
+              <QuizIcon className="w-4 h-4" />
+              Nový test
+            </button>
+            <button className="btn btn-secondary focus-ring">
+              <TrendingUpIcon className="w-4 h-4" />
+              Zobrazit analýzy
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
   );
 };
 

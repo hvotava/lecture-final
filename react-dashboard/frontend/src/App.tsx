@@ -3,6 +3,9 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { ThemeProvider, createTheme } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
 
+// Import unified theme CSS
+import './ui/theme.css';
+
 // Contexts
 import { AuthProvider } from './contexts/AuthContext';
 
@@ -31,46 +34,64 @@ import ReviewDashboard from './pages/ReviewDashboard';
 import TestResults from './pages/TestResults';
 import WebRTCDemo from './pages/WebRTCDemo';
 
-// Enhanced responsive theme
+// Enhanced responsive theme - keeping MUI theme for existing components
 const theme = createTheme({
   palette: {
     mode: 'light',
     primary: {
-      main: '#6366f1', // Indigo
-      light: '#818cf8',
-      dark: '#4f46e5',
+      main: '#0D1B2A', // Matching theme.css --primary
+      light: '#1B2937',
+      dark: '#0A1520',
     },
     secondary: {
-      main: '#f59e0b', // Amber
-      light: '#fbbf24',
-      dark: '#d97706',
+      main: '#FF7A00', // Matching theme.css --accent
+      light: '#FF8F1A',
+      dark: '#E66900',
     },
     background: {
-      default: '#f8fafc',
-      paper: '#ffffff',
+      default: '#FFFFFF', // Matching theme.css --surface
+      paper: '#FFFFFF',
     },
     text: {
-      primary: '#1e293b',
-      secondary: '#64748b',
+      primary: '#0D1B2A',
+      secondary: '#6C757D',
     },
   },
   typography: {
-    fontFamily: '"Inter", "Roboto", "Helvetica", "Arial", sans-serif',
+    fontFamily: '"Lato", "Roboto", "Helvetica", "Arial", sans-serif', // Matching theme.css --font-body
+    h1: {
+      fontFamily: '"Cormorant Garamond", serif', // Matching theme.css --font-heading
+      fontWeight: 500,
+      color: '#0D1B2A',
+    },
+    h2: {
+      fontFamily: '"Cormorant Garamond", serif',
+      fontWeight: 500,
+      color: '#0D1B2A',
+    },
+    h3: {
+      fontFamily: '"Cormorant Garamond", serif',
+      fontWeight: 500,
+      color: '#0D1B2A',
+    },
     h4: {
-      fontWeight: 600,
-      color: '#1e293b',
+      fontFamily: '"Cormorant Garamond", serif',
+      fontWeight: 500,
+      color: '#0D1B2A',
     },
     h5: {
-      fontWeight: 600,
-      color: '#1e293b',
+      fontFamily: '"Cormorant Garamond", serif',
+      fontWeight: 500,
+      color: '#0D1B2A',
     },
     h6: {
+      fontFamily: '"Cormorant Garamond", serif',
       fontWeight: 500,
-      color: '#1e293b',
+      color: '#0D1B2A',
     },
   },
   shape: {
-    borderRadius: 12,
+    borderRadius: 12, // Matching theme.css border radius
   },
   breakpoints: {
     values: {
@@ -85,8 +106,8 @@ const theme = createTheme({
     MuiCard: {
       styleOverrides: {
         root: {
-          boxShadow: '0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1)',
-          border: '1px solid #e2e8f0',
+          boxShadow: '0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1)', // Matching theme.css --shadow-sm
+          border: '1px solid #E2E8F0',
         },
       },
     },
@@ -95,45 +116,14 @@ const theme = createTheme({
         root: {
           textTransform: 'none',
           fontWeight: 500,
+          fontFamily: '"Lato", sans-serif',
         },
       },
     },
-    MuiTextField: {
+    MuiAppBar: {
       styleOverrides: {
         root: {
-          '& .MuiOutlinedInput-root': {
-            borderRadius: 8,
-          },
-        },
-      },
-    },
-    MuiPaper: {
-      styleOverrides: {
-        root: {
-          backgroundImage: 'none',
-        },
-      },
-    },
-    // Responsive typography
-    MuiTypography: {
-      styleOverrides: {
-        h1: {
-          fontSize: 'clamp(2rem, 5vw, 3.5rem)',
-        },
-        h2: {
-          fontSize: 'clamp(1.75rem, 4vw, 3rem)',
-        },
-        h3: {
-          fontSize: 'clamp(1.5rem, 3vw, 2.5rem)',
-        },
-        h4: {
-          fontSize: 'clamp(1.25rem, 2.5vw, 2rem)',
-        },
-        h5: {
-          fontSize: 'clamp(1.1rem, 2vw, 1.5rem)',
-        },
-        h6: {
-          fontSize: 'clamp(1rem, 1.5vw, 1.25rem)',
+          backgroundColor: '#0D1B2A',
         },
       },
     },

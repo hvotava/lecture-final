@@ -1,30 +1,15 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import {
-  Box,
-  Paper,
-  TextField,
-  Button,
-  Typography,
-  Alert,
-  CircularProgress,
-  Container,
-  Avatar,
-  useMediaQuery,
-} from '@mui/material';
-import { useTheme } from '@mui/material/styles';
-import { LockOutlined } from '@mui/icons-material';
+import { useNavigate, Link } from 'react-router-dom';
+import { motion } from 'framer-motion';
+import { Lock, Mail, Eye, EyeOff, ArrowLeft } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 
 const Login: React.FC = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  
-  const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
-  const isTablet = useMediaQuery(theme.breakpoints.down('md'));
   
   const { login } = useAuth();
   const navigate = useNavigate();
@@ -52,223 +37,185 @@ const Login: React.FC = () => {
     }
   };
 
+  const handleBackToHome = () => {
+    navigate('/');
+  };
+
   return (
-    <Box
-      sx={{
-        minHeight: '100vh',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-        p: { xs: 2, sm: 3 },
-      }}
-    >
-      <Container 
-        component="main" 
-        maxWidth="xs"
-        sx={{
-          width: '100%',
-          maxWidth: { xs: '100%', sm: 400 },
-        }}
-      >
-        <Paper
-          elevation={isMobile ? 0 : 10}
-          sx={{
-            padding: { xs: 3, sm: 4, md: 5 },
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            width: '100%',
-            borderRadius: { xs: 2, sm: 3 },
-            background: 'rgba(255, 255, 255, 0.95)',
-            backdropFilter: 'blur(10px)',
-            border: { xs: '1px solid rgba(255, 255, 255, 0.2)', sm: 'none' },
-          }}
+    <div className="min-h-screen bg-surface flex items-center justify-center p-6">
+      {/* Background decoration */}
+      <div className="absolute inset-0 overflow-hidden">
+        <div className="absolute top-20 left-10 w-20 h-20 bg-accent/10 rounded-full blur-xl" />
+        <div className="absolute bottom-20 right-10 w-32 h-32 bg-primary/10 rounded-full blur-2xl" />
+        <div className="absolute top-1/2 left-1/4 w-16 h-16 bg-accent/5 rounded-full blur-lg" />
+      </div>
+
+      <div className="w-full max-w-md relative z-10">
+        {/* Back to Home Button */}
+        <motion.button
+          initial={{ opacity: 0, x: -20 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ duration: 0.5 }}
+          onClick={handleBackToHome}
+          className="flex items-center gap-2 text-muted hover:text-primary transition-colors mb-6 focus-ring rounded-lg p-2"
         >
-          <Avatar 
-            sx={{ 
-              m: 1, 
-              bgcolor: 'primary.main',
-              width: { xs: 48, sm: 56 },
-              height: { xs: 48, sm: 56 },
-            }}
-          >
-            <LockOutlined sx={{ fontSize: { xs: 24, sm: 28 } }} />
-          </Avatar>
-          
-          <Typography 
-            component="h1" 
-            variant={isMobile ? "h5" : "h4"} 
-            gutterBottom
-            sx={{
-              textAlign: 'center',
-              fontWeight: 700,
-              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-              backgroundClip: 'text',
-              WebkitBackgroundClip: 'text',
-              WebkitTextFillColor: 'transparent',
-            }}
-          >
-            Lecture Dashboard
-          </Typography>
-          
-          <Typography 
-            component="h2" 
-            variant={isMobile ? "subtitle1" : "h6"} 
-            color="text.secondary" 
-            gutterBottom
-            sx={{ textAlign: 'center', mb: { xs: 2, sm: 3 } }}
-          >
-            Přihlášení do systému
-          </Typography>
+          <ArrowLeft size={20} />
+          <span className="text-medium">Zpět na hlavní stránku</span>
+        </motion.button>
 
-          {error && (
-            <Alert 
-              severity="error" 
-              sx={{ 
-                width: '100%', 
-                mb: 2,
-                fontSize: { xs: '0.8rem', sm: '0.875rem' },
-              }}
-            >
-              {error}
-            </Alert>
-          )}
+        {/* Login Card */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6 }}
+          className="card"
+        >
+          <div className="card-body">
+            {/* Header */}
+            <div className="text-center mb-8">
+              <div className="w-16 h-16 bg-gradient-to-br from-accent to-accent-dark rounded-xl flex items-center justify-center mx-auto mb-4">
+                <Lock size={24} className="text-white" />
+              </div>
+              <h1 className="heading heading-2 text-primary mb-2">
+                Přihlášení
+              </h1>
+              <p className="text-medium text-muted">
+                Přihlaste se do svého účtu AI Lektor
+              </p>
+            </div>
 
-          <Box 
-            component="form" 
-            onSubmit={handleSubmit} 
-            sx={{ 
-              mt: 1, 
-              width: '100%',
-              '& .MuiTextField-root': {
-                mb: { xs: 2, sm: 2.5 },
-              },
-            }}
-          >
-            <TextField
-              margin="normal"
-              required
-              fullWidth
-              id="email"
-              label="Email"
-              name="email"
-              autoComplete="email"
-              autoFocus={!isMobile} // Prevent autofocus on mobile to avoid keyboard popup
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              disabled={loading}
-              size={isMobile ? "small" : "medium"}
-              sx={{
-                '& .MuiOutlinedInput-root': {
-                  borderRadius: 2,
-                },
-              }}
-            />
-            
-            <TextField
-              margin="normal"
-              required
-              fullWidth
-              name="password"
-              label="Heslo"
-              type="password"
-              id="password"
-              autoComplete="current-password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              disabled={loading}
-              size={isMobile ? "small" : "medium"}
-              sx={{
-                '& .MuiOutlinedInput-root': {
-                  borderRadius: 2,
-                },
-              }}
-            />
-            
-            <Button
-              type="submit"
-              fullWidth
-              variant="contained"
-              size={isMobile ? "medium" : "large"}
-              sx={{ 
-                mt: { xs: 2, sm: 3 }, 
-                mb: 2,
-                py: { xs: 1.5, sm: 2 },
-                borderRadius: 2,
-                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                '&:hover': {
-                  background: 'linear-gradient(135deg, #5a6fd8 0%, #6a4190 100%)',
-                },
-                fontSize: { xs: '0.9rem', sm: '1rem' },
-                fontWeight: 600,
-              }}
-              disabled={loading || !email || !password}
-            >
-              {loading ? (
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                  <CircularProgress size={20} color="inherit" />
-                  <span>Přihlašování...</span>
-                </Box>
-              ) : (
-                'Přihlásit se'
-              )}
-            </Button>
-          </Box>
+            {/* Error Alert */}
+            {error && (
+              <motion.div
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="bg-error/10 border border-error/20 rounded-lg p-4 mb-6"
+              >
+                <p className="text-small text-error font-medium">{error}</p>
+              </motion.div>
+            )}
 
-          <Box 
-            sx={{ 
-              mt: { xs: 2, sm: 3 }, 
-              textAlign: 'center',
-              p: { xs: 2, sm: 3 },
-              backgroundColor: 'rgba(103, 126, 234, 0.05)',
-              borderRadius: 2,
-              border: '1px solid rgba(103, 126, 234, 0.1)',
-              width: '100%',
-            }}
-          >
-            <Typography 
-              variant="body2" 
-              color="text.secondary" 
-              gutterBottom
-              sx={{ 
-                fontWeight: 600,
-                fontSize: { xs: '0.8rem', sm: '0.875rem' },
-              }}
-            >
-              Výchozí admin účet:
-            </Typography>
-            <Typography 
-              variant="body2" 
-              sx={{ 
-                fontFamily: 'monospace',
-                fontSize: { xs: '0.75rem', sm: '0.8rem' },
-                lineHeight: 1.6,
-                backgroundColor: 'rgba(0, 0, 0, 0.05)',
-                p: 1,
-                borderRadius: 1,
-                mb: 1,
-              }}
-            >
-              Email: <strong>admin@lecture.app</strong><br />
-              Heslo: <strong>admin123</strong>
-            </Typography>
-            <Typography 
-              variant="caption" 
-              color="warning.main" 
-              sx={{ 
-                display: 'block',
-                fontSize: { xs: '0.7rem', sm: '0.75rem' },
-                fontWeight: 500,
-              }}
-            >
-              ⚠️ Změňte heslo po prvním přihlášení!
-            </Typography>
-          </Box>
-        </Paper>
-      </Container>
-    </Box>
+            {/* Login Form */}
+            <form onSubmit={handleSubmit} className="space-y-6">
+              {/* Email Field */}
+              <div>
+                <label htmlFor="email" className="block text-medium font-medium text-primary mb-2">
+                  E-mailová adresa
+                </label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <Mail size={20} className="text-muted" />
+                  </div>
+                  <input
+                    id="email"
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    className="input-field pl-12 focus-ring"
+                    placeholder="vas@email.com"
+                    required
+                    disabled={loading}
+                  />
+                </div>
+              </div>
+
+              {/* Password Field */}
+              <div>
+                <label htmlFor="password" className="block text-medium font-medium text-primary mb-2">
+                  Heslo
+                </label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <Lock size={20} className="text-muted" />
+                  </div>
+                  <input
+                    id="password"
+                    type={showPassword ? 'text' : 'password'}
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className="input-field pl-12 pr-12 focus-ring"
+                    placeholder="Vaše heslo"
+                    required
+                    disabled={loading}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute inset-y-0 right-0 pr-3 flex items-center focus-ring rounded-lg"
+                    disabled={loading}
+                  >
+                    {showPassword ? (
+                      <EyeOff size={20} className="text-muted hover:text-primary transition-colors" />
+                    ) : (
+                      <Eye size={20} className="text-muted hover:text-primary transition-colors" />
+                    )}
+                  </button>
+                </div>
+              </div>
+
+              {/* Submit Button */}
+              <button
+                type="submit"
+                disabled={loading}
+                className={`btn btn-primary w-full focus-ring ${loading ? 'opacity-75 cursor-not-allowed' : ''}`}
+              >
+                {loading ? (
+                  <div className="flex items-center justify-center gap-2">
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                    <span>Přihlašuji...</span>
+                  </div>
+                ) : (
+                  'Přihlásit se'
+                )}
+              </button>
+            </form>
+
+            {/* Footer Links */}
+            <div className="mt-8 text-center space-y-4">
+              <div className="text-small text-muted">
+                Nemáte účet?{' '}
+                <Link 
+                  to="/register" 
+                  className="text-accent hover:text-accent-dark font-medium transition-colors focus-ring rounded px-1"
+                >
+                  Zaregistrujte se
+                </Link>
+              </div>
+              
+              <div className="border-t border-gray-200 pt-4">
+                <p className="text-xs text-muted">
+                  Pokračováním souhlasíte s našimi podmínkami použití a zásadami ochrany osobních údajů.
+                </p>
+              </div>
+            </div>
+          </div>
+        </motion.div>
+
+        {/* Demo Credentials */}
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 0.2 }}
+          className="mt-6 card bg-gray-50"
+        >
+          <div className="card-body">
+            <h3 className="heading heading-6 text-primary mb-3">Demo přístup</h3>
+            <div className="space-y-2 text-small">
+              <div>
+                <span className="text-muted">Admin:</span>{' '}
+                <span className="font-mono bg-white px-2 py-1 rounded">admin@example.com</span> / 
+                <span className="font-mono bg-white px-2 py-1 rounded ml-1">admin123</span>
+              </div>
+              <div>
+                <span className="text-muted">Uživatel:</span>{' '}
+                <span className="font-mono bg-white px-2 py-1 rounded">user@example.com</span> / 
+                <span className="font-mono bg-white px-2 py-1 rounded ml-1">user123</span>
+              </div>
+            </div>
+          </div>
+        </motion.div>
+      </div>
+    </div>
   );
 };
 

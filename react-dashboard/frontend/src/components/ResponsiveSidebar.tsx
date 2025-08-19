@@ -98,17 +98,25 @@ const getMenuItems = (user: any) => {
   // Moje školení pro regular users
   if (user.role === 'regular_user') {
     items.push(
-      { text: 'Moje školení', icon: <SchoolIcon />, path: '/my-trainings', show: true }
+      { text: 'Moje školení', icon: <SchoolIcon />, path: '/trainings', show: true }
     );
   }
 
-  // Analytics jen pro admin
-  if (user.role === 'admin') {
+  // Analytics pro všechny uživatele s daty
+  if (canViewAllData(user.role)) {
     items.push(
-      { text: 'User Progress', icon: <PersonSearchIcon />, path: '/user-progress', show: true },
-      { text: 'WebRTC Demo', icon: <PhoneIcon />, path: '/webrtc-demo', show: true }
+      { text: 'Analýzy', icon: <AnalyticsIcon />, path: '/analytics', show: true },
+      { text: 'Analýzy pokroku', icon: <InsightsIcon />, path: '/progress-analytics', show: true },
+      { text: 'Analýzy uživatelů', icon: <PersonSearchIcon />, path: '/user-progress-analytics', show: true }
     );
   }
+
+  // Generátor testů a WebRTC demo pro všechny
+  items.push(
+    { text: 'AI Generátor testů', icon: <PsychologyIcon />, path: '/ai-test-generator', show: true },
+    { text: 'WebRTC Demo', icon: <PhoneIcon />, path: '/webrtc-demo', show: true },
+    { text: 'Správce otázek', icon: <QuizIcon />, path: '/question-manager', show: true }
+  );
 
   return items.filter(item => item.show);
 };
@@ -119,321 +127,192 @@ interface ResponsiveSidebarProps {
 
 const ResponsiveSidebar: React.FC<ResponsiveSidebarProps> = ({ children }) => {
   const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down('lg'));
+  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const [mobileOpen, setMobileOpen] = useState(false);
-  
   const navigate = useNavigate();
   const location = useLocation();
-  const { user, logout, isAdmin } = useAuth();
+  const { user, logout } = useAuth();
 
   const handleDrawerToggle = () => {
     setMobileOpen(!mobileOpen);
   };
 
-  const handleLogout = () => {
-    logout();
-    navigate('/login');
+  const handleLogout = async () => {
+    try {
+      await logout();
+      navigate('/');
+    } catch (error) {
+      console.error('Logout failed:', error);
+    }
   };
 
-  const handleMenuClick = (path: string) => {
+  const handleNavigation = (path: string) => {
     navigate(path);
     if (isMobile) {
       setMobileOpen(false);
     }
   };
 
-  // Get menu items based on user permissions
   const menuItems = getMenuItems(user);
 
+  // Import theme CSS pro unified styling
+  React.useEffect(() => {
+    const style = document.createElement('style');
+    style.textContent = `@import url('/src/ui/theme.css');`;
+    document.head.appendChild(style);
+    return () => document.head.removeChild(style);
+  }, []);
+
   const drawer = (
-    <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-      {/* Header */}
-      <Box
-        sx={{
-          p: 3,
-          textAlign: 'center',
-          background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
-        }}
-      >
-        <Typography variant="h5" sx={{ fontWeight: 700, color: 'white' }}>
-          📚 Lecture
-        </Typography>
-        <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.8)', mt: 0.5 }}>
-          {user ? `${getRoleDisplayName(user.role)} Panel` : 'Dashboard'}
-        </Typography>
-      </Box>
+    <div className="h-full bg-surface border-r border-gray-200 flex flex-col">
+      {/* Logo and Brand */}
+      <div className="p-6 border-b border-gray-200">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 bg-gradient-to-br from-accent to-accent-dark rounded-xl flex items-center justify-center">
+            <span className="text-white font-bold text-lg">AI</span>
+          </div>
+          <div>
+            <h1 className="heading heading-5 text-primary mb-0">AI Lektor</h1>
+            <p className="text-small text-muted">Dashboard</p>
+          </div>
+        </div>
+      </div>
 
-      <Divider sx={{ borderColor: 'rgba(255,255,255,0.1)' }} />
-
-      {/* User Info */}
+      {/* User Profile Section */}
       {user && (
-        <Box sx={{ p: { xs: 2, sm: 3 } }}>
-          <Box
-            sx={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 2,
-              p: 2,
-              backgroundColor: 'rgba(255, 255, 255, 0.05)',
-              borderRadius: 2,
-            }}
-          >
-            <Avatar
-              sx={{
-                bgcolor: isAdmin ? '#f59e0b' : '#06b6d4',
-                width: { xs: 32, sm: 40 },
-                height: { xs: 32, sm: 40 },
+        <div className="p-4 border-b border-gray-200 bg-gray-50">
+          <div className="flex items-center gap-3 mb-3">
+            <div className="w-10 h-10 bg-gradient-to-br from-primary to-primary-light rounded-full flex items-center justify-center">
+              <span className="text-white font-medium text-sm">
+                {user.username?.charAt(0).toUpperCase() || 'U'}
+              </span>
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-medium font-medium text-primary truncate">
+                {user.username}
+              </p>
+              <p className="text-small text-muted">
+                {user.email}
+              </p>
+            </div>
+          </div>
+          
+          {/* Role Badge */}
+          <div className="flex items-center justify-between">
+            <span 
+              className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium"
+              style={{
+                backgroundColor: `${getRoleColor(user.role)}20`,
+                color: getRoleColor(user.role),
+                border: `1px solid ${getRoleColor(user.role)}40`
               }}
             >
-              {isAdmin ? <AdminIcon /> : <UserIcon />}
-            </Avatar>
-            <Box sx={{ flex: 1, minWidth: 0 }}>
-              <Typography
-                variant="body2"
-                sx={{
-                  color: 'white',
-                  fontWeight: 600,
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
-                  whiteSpace: 'nowrap',
-                  fontSize: { xs: '0.8rem', sm: '0.875rem' },
-                }}
-              >
-                {user.name}
-              </Typography>
-              <Typography
-                variant="caption"
-                sx={{
-                  color: 'rgba(255, 255, 255, 0.6)',
-                  display: 'block',
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
-                  whiteSpace: 'nowrap',
-                  fontSize: { xs: '0.7rem', sm: '0.75rem' },
-                }}
-              >
-                {user.email}
-              </Typography>
-              <Chip
-                label={getRoleDisplayName(user.role)}
-                size="small"
-                color={getRoleColor(user.role)}
-                sx={{
-                  mt: 0.5,
-                  height: { xs: 16, sm: 20 },
-                  fontSize: { xs: '0.6rem', sm: '0.7rem' },
-                }}
-              />
-            </Box>
-          </Box>
-        </Box>
+              {getRoleDisplayName(user.role)}
+            </span>
+          </div>
+        </div>
       )}
 
-      <Divider sx={{ borderColor: 'rgba(255,255,255,0.1)' }} />
-
-      {/* Navigation */}
-      <List sx={{ px: 2, py: 2, flex: 1 }}>
-        {menuItems.map((item) => {
-          const isActive = location.pathname === item.path;
-          
-          return (
-            <ListItem key={item.text} disablePadding sx={{ mb: 1 }}>
-              <ListItemButton
-                onClick={() => handleMenuClick(item.path)}
-                sx={{
-                  borderRadius: 2,
-                  py: { xs: 1, sm: 1.5 },
-                  backgroundColor: isActive ? 'rgba(99, 102, 241, 0.2)' : 'transparent',
-                  border: isActive ? '1px solid rgba(99, 102, 241, 0.3)' : '1px solid transparent',
-                  '&:hover': {
-                    backgroundColor: 'rgba(255, 255, 255, 0.05)',
-                  },
-                }}
+      {/* Navigation Menu */}
+      <nav className="flex-1 p-4 overflow-y-auto">
+        <div className="space-y-1">
+          {menuItems.map((item) => {
+            const isActive = location.pathname === item.path;
+            return (
+              <button
+                key={item.path}
+                onClick={() => handleNavigation(item.path)}
+                className={`
+                  w-full flex items-center gap-3 px-4 py-3 rounded-lg text-left transition-all duration-200
+                  focus-ring
+                  ${isActive 
+                    ? 'bg-accent text-white shadow-md' 
+                    : 'text-gray-700 hover:bg-gray-100 hover:text-primary'
+                  }
+                `}
               >
-                <ListItemIcon
-                  sx={{
-                    color: isActive ? '#818cf8' : 'rgba(255, 255, 255, 0.7)',
-                    minWidth: { xs: 32, sm: 40 },
-                  }}
-                >
+                <span className={`text-lg ${isActive ? 'text-white' : 'text-gray-500'}`}>
                   {item.icon}
-                </ListItemIcon>
-                <ListItemText
-                  primary={item.text}
-                  sx={{
-                    '& .MuiListItemText-primary': {
-                      fontWeight: isActive ? 600 : 400,
-                      color: isActive ? '#e2e8f0' : 'rgba(255, 255, 255, 0.8)',
-                      fontSize: { xs: '0.85rem', sm: '0.875rem' },
-                    },
-                  }}
-                />
-              </ListItemButton>
-            </ListItem>
-          );
-        })}
-      </List>
+                </span>
+                <span className="text-medium font-medium">
+                  {item.text}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      </nav>
 
       {/* Logout Button */}
-      <Box sx={{ p: { xs: 2, sm: 3 } }}>
-        <Button
-          fullWidth
-          variant="outlined"
-          startIcon={<LogoutIcon />}
+      <div className="p-4 border-t border-gray-200">
+        <button
           onClick={handleLogout}
-          size={isMobile ? "small" : "medium"}
-          sx={{
-            color: 'rgba(255, 255, 255, 0.8)',
-            borderColor: 'rgba(255, 255, 255, 0.2)',
-            mb: 2,
-            fontSize: { xs: '0.8rem', sm: '0.875rem' },
-            '&:hover': {
-              borderColor: 'rgba(239, 68, 68, 0.5)',
-              backgroundColor: 'rgba(239, 68, 68, 0.1)',
-              color: '#fca5a5',
-            },
-          }}
+          className="btn btn-secondary w-full focus-ring"
         >
+          <LogoutIcon className="w-4 h-4" />
           Odhlásit se
-        </Button>
-
-        {/* Footer */}
-        <Box
-          sx={{
-            p: { xs: 1.5, sm: 2 },
-            backgroundColor: 'rgba(255, 255, 255, 0.05)',
-            borderRadius: 2,
-            textAlign: 'center',
-          }}
-        >
-          <Typography 
-            variant="body2" 
-            sx={{ 
-              color: 'rgba(255, 255, 255, 0.6)',
-              fontSize: { xs: '0.8rem', sm: '0.875rem' },
-            }}
-          >
-            SynQFlows Lecture
-          </Typography>
-          <Typography 
-            variant="caption" 
-            sx={{ 
-              color: 'rgba(255, 255, 255, 0.4)',
-              fontSize: { xs: '0.7rem', sm: '0.75rem' },
-            }}
-          >
-            v2.0.0
-          </Typography>
-        </Box>
-      </Box>
-    </Box>
+        </button>
+      </div>
+    </div>
   );
 
   return (
-    <Box sx={{ display: 'flex' }}>
-      {/* Mobile AppBar */}
+    <div className="flex h-screen bg-surface">
+      {/* Mobile Header */}
       {isMobile && (
-        <AppBar
-          position="fixed"
-          sx={{
-            width: '100%',
-            backgroundColor: '#1e293b',
-            zIndex: theme.zIndex.drawer + 1,
-          }}
-        >
-          <Toolbar>
-            <IconButton
-              color="inherit"
-              aria-label="open drawer"
-              edge="start"
+        <div className="fixed top-0 left-0 right-0 z-50 bg-surface border-b border-gray-200 px-4 py-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 bg-gradient-to-br from-accent to-accent-dark rounded-lg flex items-center justify-center">
+                <span className="text-white font-bold text-sm">AI</span>
+              </div>
+              <h1 className="heading heading-6 text-primary">AI Lektor</h1>
+            </div>
+            <button
               onClick={handleDrawerToggle}
+              className="p-2 rounded-lg hover:bg-gray-100 focus-ring"
             >
-              <MenuIcon />
-            </IconButton>
-            <Typography variant="h6" noWrap component="div" sx={{ flexGrow: 1 }}>
-              📚 Lecture
-            </Typography>
-            {user && (
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                <Avatar
-                  sx={{
-                    bgcolor: isAdmin ? '#f59e0b' : '#06b6d4',
-                    width: 32,
-                    height: 32,
-                  }}
-                >
-                  {isAdmin ? <AdminIcon fontSize="small" /> : <UserIcon fontSize="small" />}
-                </Avatar>
-                <Box sx={{ display: { xs: 'none', sm: 'block' } }}>
-                  <Typography variant="body2" sx={{ color: 'white', lineHeight: 1.2 }}>
-                    {user.name}
-                  </Typography>
-                  <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.7)', lineHeight: 1 }}>
-                    {isAdmin ? 'Admin' : 'User'}
-                  </Typography>
-                </Box>
-              </Box>
-            )}
-          </Toolbar>
-        </AppBar>
+              <MenuIcon className="w-6 h-6 text-gray-600" />
+            </button>
+          </div>
+        </div>
       )}
 
-      {/* Desktop Drawer */}
-      <Drawer
-        variant="permanent"
-        sx={{
-          display: { xs: 'none', lg: 'block' },
-          width: drawerWidth,
-          flexShrink: 0,
-          '& .MuiDrawer-paper': {
-            width: drawerWidth,
-            boxSizing: 'border-box',
-            backgroundColor: '#1e293b',
-            color: 'white',
-            borderRight: 'none',
-          },
-        }}
-        open
-      >
-        {drawer}
-      </Drawer>
+      {/* Desktop Sidebar */}
+      {!isMobile && (
+        <div className="w-80 flex-shrink-0">
+          {drawer}
+        </div>
+      )}
 
       {/* Mobile Drawer */}
-      <Drawer
-        variant="temporary"
-        open={mobileOpen}
-        onClose={handleDrawerToggle}
-        ModalProps={{
-          keepMounted: true, // Better open performance on mobile.
-        }}
-        sx={{
-          display: { xs: 'block', lg: 'none' },
-          '& .MuiDrawer-paper': {
-            width: drawerWidth,
-            boxSizing: 'border-box',
-            backgroundColor: '#1e293b',
-            color: 'white',
-          },
-        }}
-      >
-        {drawer}
-      </Drawer>
+      {isMobile && (
+        <>
+          {/* Overlay */}
+          {mobileOpen && (
+            <div 
+              className="fixed inset-0 bg-black/50 z-40"
+              onClick={handleDrawerToggle}
+            />
+          )}
+          
+          {/* Drawer */}
+          <div className={`
+            fixed top-0 left-0 h-full w-80 z-50 transform transition-transform duration-300
+            ${mobileOpen ? 'translate-x-0' : '-translate-x-full'}
+          `}>
+            {drawer}
+          </div>
+        </>
+      )}
 
-      {/* Main content */}
-      <Box
-        component="main"
-        sx={{
-          flexGrow: 1,
-          p: { xs: 2, sm: 3 },
-          backgroundColor: 'background.default',
-          minHeight: '100vh',
-          width: { lg: `calc(100% - ${drawerWidth}px)` },
-          mt: { xs: '64px', lg: 0 }, // Account for mobile AppBar
-        }}
-      >
-        {children}
-      </Box>
-    </Box>
+      {/* Main Content */}
+      <div className={`flex-1 flex flex-col overflow-hidden ${isMobile ? 'pt-16' : ''}`}>
+        <main className="flex-1 overflow-y-auto bg-gray-50 p-6">
+          {children}
+        </main>
+      </div>
+    </div>
   );
 };
 

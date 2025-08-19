@@ -1,14 +1,11 @@
 [phases.setup]
-nixFile = ".nixpacks/nixpacks.nix"
+nixPkgs = ["nodejs", "npm"]
 
 [phases.install]
-cmds = ["npm ci --prefer-offline=false --no-audit --cache /tmp/.npm-cache"]
+cmds = ["npm ci"]
 
 [phases.build]
 cmds = ["npm run build"]
 
 [start]
-cmd = "npm start"
-
-[variables]
-NODE_ENV = "production" 
+cmd = "npm start" 

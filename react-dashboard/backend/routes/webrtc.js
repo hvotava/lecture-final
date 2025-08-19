@@ -5,6 +5,50 @@ const { parse } = require('url');
 
 const router = express.Router();
 
+/**
+ * WebSocket route for Twilio Media Stream
+ * Express-WS automatically handles this
+ */
+router.ws('/stream', (ws, req) => {
+  const sessionId = `session_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+  console.log(`🔗 [${sessionId}] Twilio WebSocket connected via Express-WS`);
+  console.log(`🔗 [${sessionId}] Request URL:`, req.url);
+  
+  // Handle Twilio Media Stream messages
+  ws.on('message', (message) => {
+    try {
+      const data = JSON.parse(message);
+      console.log(`📨 [${sessionId}] Twilio message:`, data.event);
+      
+      switch (data.event) {
+        case 'start':
+          console.log(`▶️ [${sessionId}] Stream started:`, data.streamSid);
+          // TODO: Initialize OpenAI Realtime API connection
+          break;
+          
+        case 'media':
+          console.log(`🎵 [${sessionId}] Audio data received`);
+          // TODO: Forward to OpenAI Realtime API
+          break;
+          
+        case 'stop':
+          console.log(`⏹️ [${sessionId}] Stream stopped`);
+          break;
+      }
+    } catch (error) {
+      console.error(`❌ [${sessionId}] Error parsing message:`, error);
+    }
+  });
+  
+  ws.on('close', () => {
+    console.log(`🔌 [${sessionId}] WebSocket disconnected`);
+  });
+  
+  ws.on('error', (error) => {
+    console.error(`❌ [${sessionId}] WebSocket error:`, error);
+  });
+});
+
 // Rate limiting: 30 requests per minute per IP
 const sessionRateLimit = rateLimit({
   windowMs: 60 * 1000, // 1 minute

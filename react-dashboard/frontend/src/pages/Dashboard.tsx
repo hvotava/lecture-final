@@ -95,18 +95,18 @@ const StatCard: React.FC<StatCardProps> = ({ title, value, icon, color, change, 
     if (trend === 'down') return 'text-red-600';
     return 'text-gray-600';
   };
-
+  
   return (
     <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 hover:shadow-md transition-all duration-300 hover:-translate-y-1">
       <div className="flex items-center justify-between">
         <div className="flex-1">
           <p className="text-sm font-medium text-gray-600 mb-2">
-            {title}
+              {title}
           </p>
           <h3 className="text-3xl font-bold mb-2" style={{ color }}>
-            {value}
+              {value}
           </h3>
-          {change && (
+            {change && (
             <div className={`flex items-center space-x-1 ${getTrendColor()}`}>
               {getTrendIcon()}
               <span className="text-sm font-medium">
@@ -364,11 +364,11 @@ const Dashboard: React.FC = () => {
         </div>
       </div>
 
-      {/* Top Companies */}
+        {/* Top Companies */}
       <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
         <h3 className="text-xl font-bold text-gray-900 mb-6">Nejaktivnější firmy</h3>
         <div className="space-y-4">
-          {stats.topCompanies.map((company, index) => (
+              {stats.topCompanies.map((company, index) => (
             <div key={company.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-xl">
               <div className="flex items-center space-x-4">
                 <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">

@@ -55,8 +55,9 @@ tmp/
 temp/
 
 # Build artifacts (will be rebuilt on Railway)
-react-dashboard/frontend/build/static/
-react-dashboard/frontend/build/asset-manifest.json
+react-dashboard/frontend/build/
+# BUT keep public folder for build process
+!react-dashboard/frontend/public/
 
 # Documentation
 *.md

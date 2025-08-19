@@ -85,7 +85,7 @@ const Login: React.FC = () => {
             </div>
 
             {/* Error Alert */}
-            {error && (
+          {error && (
               <motion.div
                 initial={{ opacity: 0, y: -10 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -93,7 +93,7 @@ const Login: React.FC = () => {
               >
                 <p className="text-small text-error font-medium">{error}</p>
               </motion.div>
-            )}
+          )}
 
             {/* Login Form */}
             <form onSubmit={handleSubmit} className="space-y-6">
@@ -107,14 +107,14 @@ const Login: React.FC = () => {
                     <Mail size={20} className="text-muted" />
                   </div>
                   <input
-                    id="email"
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
+              id="email"
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
                     className="input-field pl-12 focus-ring"
                     placeholder="vas@email.com"
                     required
-                    disabled={loading}
+              disabled={loading}
                   />
                 </div>
               </div>
@@ -129,14 +129,14 @@ const Login: React.FC = () => {
                     <Lock size={20} className="text-muted" />
                   </div>
                   <input
-                    id="password"
+              id="password"
                     type={showPassword ? 'text' : 'password'}
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
                     className="input-field pl-12 pr-12 focus-ring"
                     placeholder="Vaše heslo"
                     required
-                    disabled={loading}
+              disabled={loading}
                   />
                   <button
                     type="button"
@@ -155,18 +155,18 @@ const Login: React.FC = () => {
 
               {/* Submit Button */}
               <button
-                type="submit"
+              type="submit"
                 disabled={loading}
                 className={`btn btn-primary w-full focus-ring ${loading ? 'opacity-75 cursor-not-allowed' : ''}`}
-              >
-                {loading ? (
+            >
+              {loading ? (
                   <div className="flex items-center justify-center gap-2">
                     <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
                     <span>Přihlašuji...</span>
                   </div>
-                ) : (
-                  'Přihlásit se'
-                )}
+              ) : (
+                'Přihlásit se'
+              )}
               </button>
             </form>
 

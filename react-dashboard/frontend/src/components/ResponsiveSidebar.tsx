@@ -273,7 +273,7 @@ const ResponsiveSidebar: React.FC<ResponsiveSidebarProps> = ({ children }) => {
               `}
             >
               <span className={`${isActive ? 'text-white' : 'text-gray-500'}`}>
-                {item.icon}
+                  {item.icon}
               </span>
               <span className="font-medium text-sm">
                 {item.text}
@@ -351,7 +351,7 @@ const ResponsiveSidebar: React.FC<ResponsiveSidebarProps> = ({ children }) => {
         {/* Main Content */}
         <div className={`flex-1 ${isMobile ? '' : 'ml-0'}`}>
           <main className="p-6 lg:p-8">
-            {children}
+        {children}
           </main>
         </div>
       </div>
@@ -359,6 +359,6 @@ const ResponsiveSidebar: React.FC<ResponsiveSidebarProps> = ({ children }) => {
   );
 };
 
-export default ResponsiveSidebar;
+export default ResponsiveSidebar; 
 
 // Railway cache bust - 2025-08-19-22:05 

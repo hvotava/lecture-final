@@ -5,6 +5,7 @@
     "buildCommand": "npm ci --prefer-offline=false --no-audit --cache /tmp/.npm-cache && npm run build",
     "watchPatterns": [
       "react-dashboard/frontend/src/**",
+      "react-dashboard/frontend/public/**",
       "react-dashboard/backend/**"
     ]
   },
@@ -15,5 +16,5 @@
     "restartPolicyType": "ON_FAILURE",
     "restartPolicyMaxRetries": 10
   },
-  "version": "2025-08-19-22:15-no-cache-rm"
+  "version": "2025-08-19-22:20-nixpacks-public-fix"
 } 

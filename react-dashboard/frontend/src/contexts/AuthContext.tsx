@@ -75,6 +75,27 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   };
 
+  const register = async (name: string, email: string, password: string): Promise<void> => {
+    try {
+      setLoading(true);
+      const response = await authAPI.register({ name, email, password });
+      const { token: newToken, user: newUser } = response.data;
+      
+      // Store in localStorage
+      localStorage.setItem('token', newToken);
+      localStorage.setItem('user', JSON.stringify(newUser));
+      
+      // Update state
+      setToken(newToken);
+      setUser(newUser);
+      
+      setLoading(false);
+    } catch (error) {
+      setLoading(false);
+      throw error;
+    }
+  };
+
   const logout = () => {
     // Clear localStorage
     localStorage.removeItem('token');
@@ -94,6 +115,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     isAuthenticated: !!token && !!user,
     isAdmin: user?.role === 'admin',
     login,
+    register,
     logout,
     loading,
   };

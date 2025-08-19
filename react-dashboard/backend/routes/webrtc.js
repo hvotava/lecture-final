@@ -198,13 +198,21 @@ router.ws('/stream', (ws, req) => {
             console.log(`🎵 [${sessionId}] Audio data received (streamSid: ${data.streamSid})`);
           }
           
-          // Fallback: Initialize on first media if no start event received
+          // CRITICAL FALLBACK: Initialize OpenAI immediately on first media if no start event
           if (!isOpenAIInitialized && data.streamSid) {
             streamSid = data.streamSid;
-            console.log(`⚠️ [${sessionId}] FALLBACK: No start event, initializing on first media`);
+            streamStartTime = Date.now(); // Set start time here too
+            
+            console.log(`🚨 [${sessionId}] CRITICAL FALLBACK: No start event received!`);
+            console.log(`⚠️ [${sessionId}] Initializing OpenAI on FIRST MEDIA event`);
+            console.log(`   - streamSid: ${streamSid}`);
+            console.log(`   - timestamp: ${new Date(streamStartTime).toISOString()}`);
             console.log(`🔑 [${sessionId}] OpenAI API key available:`, process.env.OPENAI_API_KEY ? 'YES' : 'NO');
+            
             isOpenAIInitialized = true;
             initializeOpenAI();
+            
+            console.log(`✅ [${sessionId}] FALLBACK OpenAI initialization triggered`);
           }
           
           // Forward audio to OpenAI
@@ -396,7 +404,11 @@ router.get('/voice', (req, res) => {
   const { CallSid, From, To } = req.query;
   const requestId = req.headers['x-request-id'] || `twilio_${Date.now()}`;
   
+  console.log(`🚨🚨🚨 [${requestId}] TWILIO VOICE WEBHOOK CALLED! 🚨🚨🚨`);
   console.log(`[${requestId}] 📞 Incoming Twilio call:`, { CallSid, From, To });
+  console.log(`[${requestId}] 🌐 Request URL:`, req.url);
+  console.log(`[${requestId}] 📝 Query params:`, req.query);
+  console.log(`[${requestId}] 🔗 Headers:`, JSON.stringify(req.headers, null, 2));
 
   // Získej base URL bez https:// pro WebSocket
   const baseUrl = (process.env.APP_BASE_URL || `https://${req.get('host')}`).replace(/^https?:\/\//, '');
@@ -434,7 +446,11 @@ router.post('/voice', (req, res) => {
   const { CallSid, From, To } = req.body;
   const requestId = req.headers['x-request-id'] || `twilio_${Date.now()}`;
   
+  console.log(`🚨🚨🚨 [${requestId}] TWILIO VOICE WEBHOOK CALLED (POST)! 🚨🚨🚨`);
   console.log(`[${requestId}] 📞 Incoming Twilio call (POST):`, { CallSid, From, To });
+  console.log(`[${requestId}] 🌐 Request URL:`, req.url);
+  console.log(`[${requestId}] 📝 Body:`, req.body);
+  console.log(`[${requestId}] 🔗 Headers:`, JSON.stringify(req.headers, null, 2));
 
   // Získej base URL bez https:// pro WebSocket
   const baseUrl = (process.env.APP_BASE_URL || `https://${req.get('host')}`).replace(/^https?:\/\//, '');

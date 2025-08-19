@@ -2,6 +2,7 @@ const express = require('express');
 const rateLimit = require('express-rate-limit');
 const WebSocket = require('ws');
 const { parse } = require('url');
+const fetch = require('node-fetch'); // Add fetch support
 
 const router = express.Router();
 
@@ -47,7 +48,13 @@ router.ws('/stream', (ws, req) => {
   // Initialize OpenAI Session using Sessions API (same as WebRTC dialog)
   const initializeOpenAI = async () => {
     try {
-      console.log(`🚀 [${sessionId}] Initializing OpenAI session via Sessions API...`);
+      console.log(`🚀🚀🚀 [${sessionId}] STARTING OpenAI initialization via Sessions API...`);
+      console.log(`🔍 [${sessionId}] Current state:`, { 
+        openaiSession: !!openaiSession, 
+        openaiWs: !!openaiWs, 
+        streamSid,
+        streamStartTime: streamStartTime ? new Date(streamStartTime).toISOString() : 'null'
+      });
       
       // Create OpenAI session using the same endpoint as WebRTC dialog
       const sessionRequest = {
@@ -56,12 +63,14 @@ router.ws('/stream', (ws, req) => {
         instructions: 'Jste AI asistent pro vzdělávací platformu. Mluvte česky a buďte nápomocní. Veď interaktivní konverzaci přes telefon.'
       };
       
-      console.log(`🔗 [${sessionId}] Creating OpenAI session...`);
+      console.log(`🔗 [${sessionId}] Creating OpenAI session with params:`, sessionRequest);
       
       // Use the same logic as /session endpoint
       const openaiApiKey = process.env.OPENAI_API_KEY;
+      console.log(`🔑 [${sessionId}] OpenAI API key check:`, openaiApiKey ? `PRESENT (${openaiApiKey.substring(0, 10)}...)` : 'MISSING');
+      
       if (!openaiApiKey) {
-        console.error(`❌ [${sessionId}] OpenAI API key not configured`);
+        console.error(`❌ [${sessionId}] OpenAI API key not configured - ABORTING!`);
         return;
       }
       
@@ -203,7 +212,10 @@ router.ws('/stream', (ws, req) => {
           if (!isOpenAIInitialized) {
             console.log(`🚀 [${sessionId}] Initializing OpenAI on STREAM START...`);
             isOpenAIInitialized = true;
-            initializeOpenAI();
+            initializeOpenAI().catch(error => {
+              console.error(`❌ [${sessionId}] OpenAI initialization failed:`, error);
+              isOpenAIInitialized = false; // Reset flag on failure
+            });
             console.log(`✅ [${sessionId}] OpenAI initialization triggered`);
           } else {
             console.log(`⚠️ [${sessionId}] OpenAI already initialized, skipping`);
@@ -228,7 +240,10 @@ router.ws('/stream', (ws, req) => {
             console.log(`🔑 [${sessionId}] OpenAI API key available:`, process.env.OPENAI_API_KEY ? 'YES' : 'NO');
             
             isOpenAIInitialized = true;
-            initializeOpenAI();
+            initializeOpenAI().catch(error => {
+              console.error(`❌ [${sessionId}] FALLBACK OpenAI initialization failed:`, error);
+              isOpenAIInitialized = false; // Reset flag on failure
+            });
             
             console.log(`✅ [${sessionId}] FALLBACK OpenAI initialization triggered`);
           }

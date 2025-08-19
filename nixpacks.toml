@@ -1,15 +1,14 @@
 [phases.setup]
-nixPkgs = ['nodejs_18']
+nixPkgs = ["nodejs", "npm"]
 
 [phases.install]
-cmds = ['npm ci']
+cmds = ["npm ci --prefer-offline=false --no-audit --cache /tmp/.npm-cache"]
 
 [phases.build]
-cmds = ['npm run build']
+cmds = ["npm run build"]
 
 [start]
-cmd = 'npm start'
+cmd = "npm start"
 
 [variables]
-NODE_ENV = 'production'
-NPM_CONFIG_PRODUCTION = 'false' 
+NODE_ENV = "production" 

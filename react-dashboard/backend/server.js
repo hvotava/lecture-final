@@ -269,6 +269,16 @@ app.use((err, req, res, next) => {
   });
 });
 
+// Log all incoming requests for debugging
+app.use('*', (req, res, next) => {
+  if (req.path.includes('/api/webrtc/voice')) {
+    console.log(`🚨🚨🚨 SERVER.JS: ${req.method} ${req.path} INTERCEPTED! 🚨🚨🚨`);
+    console.log(`🚨 Headers:`, JSON.stringify(req.headers, null, 2));
+    console.log(`🚨 Body:`, req.body);
+  }
+  next();
+});
+
 // All other GET requests not handled before will return the React app
 // BUT exclude API routes to avoid overriding them
 app.get('*', (req, res, next) => {

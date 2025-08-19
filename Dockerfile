@@ -4,20 +4,20 @@ FROM node:18-alpine
 # Set working directory
 WORKDIR /app
 
-# Copy package files
+# Copy package files first
 COPY package*.json ./
 COPY react-dashboard/frontend/package*.json ./react-dashboard/frontend/
 COPY react-dashboard/backend/package*.json ./react-dashboard/backend/
 
-# Install dependencies with clean cache
+# Install dependencies
 RUN npm ci --only=production --no-audit --no-fund --cache /tmp/.npm-cache
 
-# Copy source code
-COPY . .
+# Copy source code (including public folder)
+COPY react-dashboard/frontend/ ./react-dashboard/frontend/
+COPY react-dashboard/backend/ ./react-dashboard/backend/
 
-# Ensure public folder exists and copy it
-RUN mkdir -p react-dashboard/frontend/public
-COPY react-dashboard/frontend/public/* react-dashboard/frontend/public/
+# Verify public folder exists
+RUN ls -la react-dashboard/frontend/ && echo "--- Public folder contents ---" && ls -la react-dashboard/frontend/public/
 
 # Build frontend
 RUN cd react-dashboard/frontend && CI=false npm run build

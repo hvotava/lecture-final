@@ -54,6 +54,10 @@ Thumbs.db
 tmp/
 temp/
 
+# Force NIXPACKS builder (exclude Dockerfile)
+Dockerfile
+.dockerignore
+
 # Git
 .git/
 .gitignore

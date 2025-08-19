@@ -175,9 +175,9 @@ router.ws('/stream', (ws, req) => {
   ws.on('message', (message) => {
     try {
       const data = JSON.parse(message);
-      console.log(`📨 [${sessionId}] Twilio message:`, data.event);
-      // Only log full data for non-media events to avoid rate limit
+      // Skip logging media events to avoid Railway rate limit
       if (data.event !== 'media') {
+        console.log(`📨 [${sessionId}] Twilio message:`, data.event);
         console.log(`📋 [${sessionId}] Full Twilio data:`, JSON.stringify(data, null, 2));
       }
       
@@ -211,8 +211,8 @@ router.ws('/stream', (ws, req) => {
           break;
           
         case 'media':
-          // Only log occasionally to avoid spam
-          if (Math.random() < 0.01) { // Log ~1% of media events
+          // Reduced logging to avoid Railway rate limit
+          if (Math.random() < 0.001) { // Log ~0.1% of media events
             console.log(`🎵 [${sessionId}] Audio data received (streamSid: ${data.streamSid})`);
           }
           
@@ -241,8 +241,8 @@ router.ws('/stream', (ws, req) => {
             };
             openaiWs.send(JSON.stringify(audioEvent));
             
-            // Log occasionally to verify audio flow
-            if (Math.random() < 0.001) { // Very rarely
+            // Log very rarely to avoid Railway rate limit
+            if (Math.random() < 0.0001) { // Extremely rarely
               console.log(`📤 [${sessionId}] Forwarded ${data.media.payload.length} bytes audio to OpenAI`);
             }
           } else if (isOpenAIInitialized) {
@@ -471,13 +471,10 @@ router.post('/voice', (req, res) => {
   const { CallSid, From, To } = req.body;
   const requestId = req.headers['x-request-id'] || `twilio_${Date.now()}`;
   
-  // FORCE CONSOLE LOGS - MULTIPLE WAYS
-  console.error(`🚨🚨🚨 [${requestId}] WEBRTC VOICE WEBHOOK CALLED (POST)! 🚨🚨🚨`);
-  console.warn(`🚨🚨🚨 [${requestId}] WEBRTC VOICE WEBHOOK CALLED (POST)! 🚨🚨🚨`);
-  console.info(`🚨🚨🚨 [${requestId}] WEBRTC VOICE WEBHOOK CALLED (POST)! 🚨🚨🚨`);
-  console.log(`🚨🚨🚨 [${requestId}] WEBRTC VOICE WEBHOOK CALLED (POST)! 🚨🚨🚨`);
-  
+  // CRITICAL LOG - FORCE OUTPUT TO AVOID RAILWAY RATE LIMIT
+  process.stderr.write(`🚨🚨🚨 WEBHOOK HIT: ${requestId} 🚨🚨🚨\n`);
   process.stdout.write(`🚨🚨🚨 WEBRTC WEBHOOK HIT! ${requestId}\n`);
+  console.error(`🚨🚨🚨 [${requestId}] WEBRTC VOICE WEBHOOK CALLED (POST)! 🚨🚨🚨`);
   
   console.log(`[${requestId}] 📞 Incoming Twilio call (POST):`, { CallSid, From, To });
   console.log(`[${requestId}] 🌐 Request URL:`, req.url);

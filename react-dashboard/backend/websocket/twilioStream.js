@@ -29,8 +29,11 @@ function setupTwilioWebSocket(server) {
     console.log('🔄 WebSocket upgrade request for:', pathname);
     console.log('🔄 Full URL:', request.url);
     
-    if (pathname === '/api/webrtc/stream' || pathname?.startsWith('/api/webrtc/stream')) {
-      console.log('✅ WebSocket upgrade accepted for /api/webrtc/stream');
+    if (pathname === '/api/webrtc/stream' || 
+        pathname?.startsWith('/api/webrtc/stream') ||
+        pathname === '/webrtc/stream/.websocket' ||
+        pathname?.startsWith('/webrtc/stream')) {
+      console.log('✅ WebSocket upgrade accepted for Twilio stream:', pathname);
       
       wss.handleUpgrade(request, socket, head, (ws) => {
         wss.emit('connection', ws, request);

@@ -12,6 +12,8 @@ import Login from './components/Login';
 import ProtectedRoute from './components/ProtectedRoute';
 
 // Pages
+import LandingPage from './pages/LandingPage';
+import RegisterPage from './pages/RegisterPage';
 import Dashboard from './pages/Dashboard';
 import Users from './pages/Users';
 import UserManagement from './pages/UserManagement';
@@ -159,7 +161,7 @@ function App() {
             />
             
             <Route
-              path="/dashboard"
+              path="/app"
               element={
                 <ProtectedRoute>
                   <ResponsiveSidebar>
@@ -167,6 +169,10 @@ function App() {
                   </ResponsiveSidebar>
                 </ProtectedRoute>
               }
+            />
+            <Route
+              path="/dashboard"
+              element={<Navigate to="/app" replace />}
             />
             
             <Route
@@ -334,8 +340,14 @@ function App() {
               }
             />
             
-            {/* Catch all route */}
-            <Route path="*" element={<Navigate to="/dashboard" replace />} />
+            {/* Landing Page */}
+            <Route path="/" element={<LandingPage />} />
+            
+            {/* Register Page */}
+            <Route path="/register" element={<RegisterPage />} />
+            
+            {/* Catch all route - redirect to landing for unauthenticated, dashboard for authenticated */}
+            <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </Router>
       </AuthProvider>

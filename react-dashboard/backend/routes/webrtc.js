@@ -439,20 +439,18 @@ router.get('/voice', (req, res) => {
   const baseUrl = (process.env.APP_BASE_URL || `https://${req.get('host')}`).replace(/^https?:\/\//, '');
   const wsUrl = `wss://${baseUrl}/api/webrtc/stream`;
 
-  // TwiML response s Media Stream - FIXED: použití <Start> místo <Connect>
+  // TwiML response s Media Stream - FIXED: použití <Connect> pro BIDIRECTIONAL stream!
   const twiml = `<?xml version="1.0" encoding="UTF-8"?>
 <Response>
   <Say voice="Google.cs-CZ-Standard-A" language="cs-CZ">
     Vítejte v interaktivním školení. Připojuji vás k AI asistentovi.
   </Say>
-  <Start>
+  <Connect>
     <Stream 
       name="openai_realtime_stream"
       url="${wsUrl}"
-      track="both_tracks"
     />
-  </Start>
-  <Pause length="3600"/>
+  </Connect>
 </Response>`;
 
   console.log(`[${requestId}] 📡 TwiML WebSocket URL: ${wsUrl}`);
@@ -485,20 +483,18 @@ router.post('/voice', (req, res) => {
   const baseUrl = (process.env.APP_BASE_URL || `https://${req.get('host')}`).replace(/^https?:\/\//, '');
   const wsUrl = `wss://${baseUrl}/api/webrtc/stream`;
 
-  // TwiML response s Media Stream - FIXED: použití <Start> místo <Connect>
+  // TwiML response s Media Stream - FIXED: použití <Connect> pro BIDIRECTIONAL stream!
   const twiml = `<?xml version="1.0" encoding="UTF-8"?>
 <Response>
   <Say voice="Google.cs-CZ-Standard-A" language="cs-CZ">
     Vítejte v interaktivním školení. Připojuji vás k AI asistentovi.
   </Say>
-  <Start>
+  <Connect>
     <Stream 
       name="openai_realtime_stream"
       url="${wsUrl}"
-      track="both_tracks"
     />
-  </Start>
-  <Pause length="3600"/>
+  </Connect>
 </Response>`;
 
   console.log(`[${requestId}] 📡 TwiML WebSocket URL: ${wsUrl}`);

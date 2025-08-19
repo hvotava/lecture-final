@@ -14,6 +14,80 @@ router.ws('/stream', (ws, req) => {
   console.log(`🔗 [${sessionId}] Twilio WebSocket connected via Express-WS`);
   console.log(`🔗 [${sessionId}] Request URL:`, req.url);
   
+  let openaiWs = null;
+  let streamSid = null;
+  
+  // Initialize OpenAI Realtime API connection
+  const initializeOpenAI = async () => {
+    try {
+      const openaiApiKey = process.env.OPENAI_API_KEY;
+      if (!openaiApiKey) {
+        console.error(`❌ [${sessionId}] OpenAI API key not configured`);
+        return;
+      }
+      
+      openaiWs = new WebSocket('wss://api.openai.com/v1/realtime?model=gpt-4o-realtime-preview-2024-10-01', {
+        headers: {
+          'Authorization': `Bearer ${openaiApiKey}`,
+          'OpenAI-Beta': 'realtime=v1'
+        }
+      });
+      
+      openaiWs.on('open', () => {
+        console.log(`🤖 [${sessionId}] OpenAI Realtime API connected`);
+        
+        // Send session configuration
+        const sessionConfig = {
+          type: 'session.update',
+          session: {
+            modalities: ['text', 'audio'],
+            instructions: 'Jste AI asistent pro vzdělávací platformu. Mluvte česky a buďte nápomocní.',
+            voice: 'alloy',
+            input_audio_format: 'pcm16',
+            output_audio_format: 'pcm16',
+            turn_detection: {
+              type: 'server_vad',
+              threshold: 0.5,
+              prefix_padding_ms: 300,
+              silence_duration_ms: 500
+            }
+          }
+        };
+        
+        openaiWs.send(JSON.stringify(sessionConfig));
+      });
+      
+      openaiWs.on('message', (data) => {
+        try {
+          const event = JSON.parse(data);
+          console.log(`🤖 [${sessionId}] OpenAI event:`, event.type);
+          
+          if (event.type === 'response.audio.delta' && event.delta && streamSid) {
+            // Send audio back to Twilio
+            const audioMessage = {
+              event: 'media',
+              streamSid: streamSid,
+              media: {
+                payload: event.delta
+              }
+            };
+            ws.send(JSON.stringify(audioMessage));
+            console.log(`🔊 [${sessionId}] Sent audio to Twilio`);
+          }
+        } catch (error) {
+          console.error(`❌ [${sessionId}] Error processing OpenAI message:`, error);
+        }
+      });
+      
+      openaiWs.on('error', (error) => {
+        console.error(`❌ [${sessionId}] OpenAI WebSocket error:`, error);
+      });
+      
+    } catch (error) {
+      console.error(`❌ [${sessionId}] Error initializing OpenAI:`, error);
+    }
+  };
+  
   // Handle Twilio Media Stream messages
   ws.on('message', (message) => {
     try {
@@ -22,17 +96,29 @@ router.ws('/stream', (ws, req) => {
       
       switch (data.event) {
         case 'start':
-          console.log(`▶️ [${sessionId}] Stream started:`, data.streamSid);
-          // TODO: Initialize OpenAI Realtime API connection
+          streamSid = data.streamSid;
+          console.log(`▶️ [${sessionId}] Stream started:`, streamSid);
+          // Initialize OpenAI connection
+          initializeOpenAI();
           break;
           
         case 'media':
           console.log(`🎵 [${sessionId}] Audio data received`);
-          // TODO: Forward to OpenAI Realtime API
+          // Forward audio to OpenAI
+          if (openaiWs && openaiWs.readyState === WebSocket.OPEN) {
+            const audioEvent = {
+              type: 'input_audio_buffer.append',
+              audio: data.media.payload
+            };
+            openaiWs.send(JSON.stringify(audioEvent));
+          }
           break;
           
         case 'stop':
           console.log(`⏹️ [${sessionId}] Stream stopped`);
+          if (openaiWs) {
+            openaiWs.close();
+          }
           break;
       }
     } catch (error) {
@@ -42,10 +128,16 @@ router.ws('/stream', (ws, req) => {
   
   ws.on('close', () => {
     console.log(`🔌 [${sessionId}] WebSocket disconnected`);
+    if (openaiWs) {
+      openaiWs.close();
+    }
   });
   
   ws.on('error', (error) => {
     console.error(`❌ [${sessionId}] WebSocket error:`, error);
+    if (openaiWs) {
+      openaiWs.close();
+    }
   });
 });
 

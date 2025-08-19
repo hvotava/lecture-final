@@ -263,7 +263,12 @@ app.use((err, req, res, next) => {
 });
 
 // All other GET requests not handled before will return the React app
-app.get('*', (req, res) => {
+// BUT exclude API routes to avoid overriding them
+app.get('*', (req, res, next) => {
+  // Skip if this is an API route
+  if (req.path.startsWith('/api/')) {
+    return next();
+  }
   res.sendFile(path.join(__dirname, '..', 'frontend', 'build', 'index.html'));
 });
 

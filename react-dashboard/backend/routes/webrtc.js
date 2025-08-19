@@ -14,47 +14,75 @@ router.ws('/stream', (ws, req) => {
   console.log(`🔗 [${sessionId}] Twilio WebSocket connected via Express-WS`);
   console.log(`🔗 [${sessionId}] Request URL:`, req.url);
   
+  let openaiSession = null;
   let openaiWs = null;
   let streamSid = null;
   
-  // Initialize OpenAI Realtime API connection
+  // Initialize OpenAI Session using Sessions API (same as WebRTC dialog)
   const initializeOpenAI = async () => {
     try {
+      console.log(`🚀 [${sessionId}] Initializing OpenAI session via Sessions API...`);
+      
+      // Create OpenAI session using the same endpoint as WebRTC dialog
+      const sessionRequest = {
+        voice: 'alloy',
+        temperature: 0.8,
+        instructions: 'Jste AI asistent pro vzdělávací platformu. Mluvte česky a buďte nápomocní. Veď interaktivní konverzaci přes telefon.'
+      };
+      
+      console.log(`🔗 [${sessionId}] Creating OpenAI session...`);
+      
+      // Use the same logic as /session endpoint
       const openaiApiKey = process.env.OPENAI_API_KEY;
       if (!openaiApiKey) {
         console.error(`❌ [${sessionId}] OpenAI API key not configured`);
         return;
       }
       
-      openaiWs = new WebSocket('wss://api.openai.com/v1/realtime?model=gpt-4o-realtime-preview-2024-10-01', {
+      // Create session via OpenAI Sessions API
+      const sessionResponse = await fetch('https://api.openai.com/v1/realtime/sessions', {
+        method: 'POST',
         headers: {
           'Authorization': `Bearer ${openaiApiKey}`,
-          'OpenAI-Beta': 'realtime=v1'
-        }
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          model: 'gpt-4o-realtime-preview',
+          voice: sessionRequest.voice,
+          modalities: ['text', 'audio'],
+          instructions: sessionRequest.instructions,
+          temperature: sessionRequest.temperature,
+          turn_detection: {
+            type: 'server_vad',
+            threshold: 0.5,
+            prefix_padding_ms: 300,
+            silence_duration_ms: 500
+          },
+          input_audio_format: 'pcm16',
+          output_audio_format: 'pcm16',
+          input_audio_transcription: {
+            model: 'whisper-1'
+          }
+        })
       });
       
+      if (!sessionResponse.ok) {
+        const error = await sessionResponse.json().catch(() => ({ error: 'Unknown error' }));
+        console.error(`❌ [${sessionId}] Failed to create OpenAI session:`, error);
+        return;
+      }
+      
+      openaiSession = await sessionResponse.json();
+      console.log(`✅ [${sessionId}] OpenAI session created:`, openaiSession.id);
+      
+      // Connect to the session WebSocket
+      const wsUrl = `${openaiSession.client_secret.value}`;
+      console.log(`🔗 [${sessionId}] Connecting to OpenAI WebSocket...`);
+      
+      openaiWs = new WebSocket(wsUrl);
+      
       openaiWs.on('open', () => {
-        console.log(`🤖 [${sessionId}] OpenAI Realtime API connected`);
-        
-        // Send session configuration
-        const sessionConfig = {
-          type: 'session.update',
-          session: {
-            modalities: ['text', 'audio'],
-            instructions: 'Jste AI asistent pro vzdělávací platformu. Mluvte česky a buďte nápomocní.',
-            voice: 'alloy',
-            input_audio_format: 'pcm16',
-            output_audio_format: 'pcm16',
-            turn_detection: {
-              type: 'server_vad',
-              threshold: 0.5,
-              prefix_padding_ms: 300,
-              silence_duration_ms: 500
-            }
-          }
-        };
-        
-        openaiWs.send(JSON.stringify(sessionConfig));
+        console.log(`🤖 [${sessionId}] OpenAI WebSocket connected to session:`, openaiSession.id);
       });
       
       openaiWs.on('message', (data) => {
@@ -83,8 +111,12 @@ router.ws('/stream', (ws, req) => {
         console.error(`❌ [${sessionId}] OpenAI WebSocket error:`, error);
       });
       
+      openaiWs.on('close', () => {
+        console.log(`🔌 [${sessionId}] OpenAI WebSocket disconnected`);
+      });
+      
     } catch (error) {
-      console.error(`❌ [${sessionId}] Error initializing OpenAI:`, error);
+      console.error(`❌ [${sessionId}] Error initializing OpenAI session:`, error);
     }
   };
   
@@ -98,6 +130,7 @@ router.ws('/stream', (ws, req) => {
         case 'start':
           streamSid = data.streamSid;
           console.log(`▶️ [${sessionId}] Stream started:`, streamSid);
+          console.log(`🔑 [${sessionId}] OpenAI API key available:`, process.env.OPENAI_API_KEY ? 'YES' : 'NO');
           // Initialize OpenAI connection
           initializeOpenAI();
           break;

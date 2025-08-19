@@ -404,6 +404,10 @@ const startServer = async () => {
       console.log(`   - TWILIO_AUTH_TOKEN: ${process.env.TWILIO_AUTH_TOKEN ? 'SET' : 'NOT SET'}`);
       console.log(`   - TWILIO_PHONE_NUMBER: ${process.env.TWILIO_PHONE_NUMBER || 'NOT SET'}`);
       
+      // Debug OpenAI configuration
+      console.log(`🤖 OpenAI Configuration:`);
+      console.log(`   - OPENAI_API_KEY: ${process.env.OPENAI_API_KEY ? 'SET' : 'NOT SET'}`);
+      
       // Debug WebSocket routes
       console.log(`🔌 WebSocket routes:`);
       console.log(`   - wss://host/api/twilio/webrtc/test`);

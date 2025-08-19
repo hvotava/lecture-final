@@ -6,7 +6,7 @@
   "scripts": {
     "preinstall": "echo 'Installing dependencies...'",
     "install": "cd react-dashboard/frontend && npm install && cd ../backend && npm install",
-    "build": "cd react-dashboard/frontend && npm cache clean --force && CI=false npm run build",
+    "build": "cd react-dashboard/frontend && CI=false npm run build",
     "start": "cd react-dashboard/backend && npm start",
     "postinstall": "npm run build"
   },

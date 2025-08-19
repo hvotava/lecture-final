@@ -1,10 +1,21 @@
 const express = require('express');
 const rateLimit = require('express-rate-limit');
 const WebSocket = require('ws');
-const { parse } = require('url');
-const fetch = require('node-fetch'); // Add fetch support
 
 const router = express.Router();
+
+// Configuration constants
+const SYSTEM_MESSAGE = 'Jste AI asistent pro vzdělávací platformu. Mluvte česky a buďte nápomocní. Veď interaktivní konverzaci přes telefon. Udržujte odpovědi krátké a přirozené.';
+const VOICE = 'alloy';
+const LOG_EVENT_TYPES = [
+    'response.content.done',
+    'rate_limits.updated', 
+    'response.done',
+    'input_audio_buffer.committed',
+    'input_audio_buffer.speech_stopped',
+    'input_audio_buffer.speech_started',
+    'session.created'
+];
 
 /**
  * Test endpoint to check if routes work
@@ -18,378 +29,168 @@ router.get('/stream', (req, res) => {
 });
 
 /**
- * WebSocket route for Twilio Media Stream
- * Express-WS automatically handles this
+ * WebSocket route for Twilio Media Stream - OFFICIAL TWILIO + OPENAI REALTIME API INTEGRATION
  */
 router.ws('/stream', (ws, req) => {
-  const sessionId = `session_${Date.now()}_${Math.random().toString(36).slice(2)}_${process.hrtime.bigint()}`;
-  console.log(`🔗🆕 [${sessionId}] BRAND NEW Twilio WebSocket connected via Express-WS`);
-  console.log(`🔗🆕 [${sessionId}] Request URL:`, req.url);
-  console.log(`🔗🆕 [${sessionId}] Connection timestamp:`, new Date().toISOString());
-  console.log(`🔗🆕 [${sessionId}] Request headers:`, JSON.stringify(req.headers, null, 2));
+  const sessionId = `session_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+  console.log(`🎯 [${sessionId}] NEW Twilio WebSocket connected - OFFICIAL INTEGRATION`);
   
-  // FORCE reset state for each new WebSocket connection - COMPLETELY ISOLATED
-  let openaiSession = null;
-  let openaiWs = null;
-  let streamSid = null;
-  let isOpenAIInitialized = false;
-  let streamStartTime = null;
-  let openaiConnectedTime = null;
-  let callSid = null;
+  // Direct OpenAI WebSocket connection (no Sessions API!)
+  const openaiApiKey = process.env.OPENAI_API_KEY;
+  if (!openaiApiKey) {
+    console.error(`❌ [${sessionId}] Missing OpenAI API key`);
+    ws.close();
+    return;
+  }
   
-  console.log(`🔄🆕 [${sessionId}] COMPLETE STATE RESET:`);
-  console.log(`   - openaiSession: ${openaiSession}`);
-  console.log(`   - openaiWs: ${openaiWs}`);
-  console.log(`   - streamSid: ${streamSid}`);
-  console.log(`   - isOpenAIInitialized: ${isOpenAIInitialized}`);
-  console.log(`   - streamStartTime: ${streamStartTime}`);
-  console.log(`   - openaiConnectedTime: ${openaiConnectedTime}`);
+  console.log(`🔗 [${sessionId}] Connecting directly to OpenAI Realtime API...`);
   
-  // Initialize OpenAI Session using Sessions API (same as WebRTC dialog)
-  const initializeOpenAI = async () => {
-    try {
-      console.log(`🚀🚀🚀 [${sessionId}] STARTING OpenAI initialization via Sessions API...`);
-      console.log(`🔍 [${sessionId}] Current state:`, { 
-        openaiSession: !!openaiSession, 
-        openaiWs: !!openaiWs, 
-        streamSid,
-        streamStartTime: streamStartTime ? new Date(streamStartTime).toISOString() : 'null'
-      });
-      
-      // Create OpenAI session using the same endpoint as WebRTC dialog
-      const sessionRequest = {
-        voice: 'alloy',
-        temperature: 0.8,
-        instructions: 'Jste AI asistent pro vzdělávací platformu. Mluvte česky a buďte nápomocní. Veď interaktivní konverzaci přes telefon.'
-      };
-      
-      console.log(`🔗 [${sessionId}] Creating OpenAI session with params:`, sessionRequest);
-      
-      // Use the same logic as /session endpoint
-      const openaiApiKey = process.env.OPENAI_API_KEY;
-      console.log(`🔑 [${sessionId}] OpenAI API key check:`, openaiApiKey ? `PRESENT (${openaiApiKey.substring(0, 10)}...)` : 'MISSING');
-      
-      if (!openaiApiKey) {
-        console.error(`❌ [${sessionId}] OpenAI API key not configured - ABORTING!`);
-        return;
+  const openAiWs = new WebSocket(
+    'wss://api.openai.com/v1/realtime?model=gpt-4o-realtime-preview-2024-10-01',
+    {
+      headers: {
+        Authorization: `Bearer ${openaiApiKey}`,
+        "OpenAI-Beta": "realtime=v1"
       }
-      
-      // Create session via OpenAI Sessions API
-      const sessionResponse = await fetch('https://api.openai.com/v1/realtime/sessions', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${openaiApiKey}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          model: 'gpt-4o-realtime-preview',
-          voice: sessionRequest.voice,
-          modalities: ['text', 'audio'],
-          instructions: sessionRequest.instructions,
-          temperature: sessionRequest.temperature,
-          turn_detection: {
-            type: 'server_vad',
-            threshold: 0.5,
-            prefix_padding_ms: 300,
-            silence_duration_ms: 500
-          },
-          input_audio_format: 'pcm16',
-          output_audio_format: 'pcm16',
-          input_audio_transcription: {
-            model: 'whisper-1'
-          }
-        })
-      });
-      
-      if (!sessionResponse.ok) {
-        const error = await sessionResponse.json().catch(() => ({ error: 'Unknown error' }));
-        console.error(`❌ [${sessionId}] Failed to create OpenAI session:`, error);
-        return;
-      }
-      
-      openaiSession = await sessionResponse.json();
-      console.log(`✅ [${sessionId}] OpenAI session created:`, openaiSession.id);
-      
-      // Connect to the session WebSocket
-      const wsUrl = `${openaiSession.client_secret.value}`;
-      console.log(`🔗 [${sessionId}] Connecting to OpenAI WebSocket...`);
-      
-      openaiWs = new WebSocket(wsUrl);
-      
-      openaiWs.on('open', () => {
-        openaiConnectedTime = Date.now();
-        console.log(`🤖 [${sessionId}] OpenAI WebSocket connected to session:`, openaiSession.id);
-        console.log(`⏰ [${sessionId}] OpenAI connected at:`, new Date(openaiConnectedTime).toISOString());
-        
-        if (streamStartTime) {
-          const connectionDelay = (openaiConnectedTime - streamStartTime) / 1000;
-          console.log(`⏰ [${sessionId}] OpenAI connection took: ${connectionDelay}s from stream start`);
-        }
-      });
-      
-      openaiWs.on('message', (data) => {
-        try {
-          const event = JSON.parse(data);
-          
-          // Log important events with details
-          if (event.type === 'response.audio.delta') {
-            console.log(`🔊 [${sessionId}] OpenAI audio delta (${event.delta?.length || 0} bytes)`);
-          } else if (event.type === 'input_audio_buffer.speech_started') {
-            console.log(`🎙️ [${sessionId}] User started speaking`);
-          } else if (event.type === 'input_audio_buffer.speech_stopped') {
-            console.log(`🔇 [${sessionId}] User stopped speaking`);
-          } else if (event.type === 'response.audio.done') {
-            console.log(`✅ [${sessionId}] OpenAI finished speaking`);
-          } else if (event.type === 'error') {
-            console.log(`❌ [${sessionId}] OpenAI error:`, event);
-          } else {
-            console.log(`🤖 [${sessionId}] OpenAI event:`, event.type, event);
-          }
-          
-          if (event.type === 'response.audio.delta' && event.delta && streamSid) {
-            if (ws.readyState === WebSocket.OPEN) {
-              // Send audio back to Twilio
-              const audioMessage = {
-                event: 'media',
-                streamSid: streamSid,
-                media: {
-                  payload: event.delta
-                }
-              };
-              ws.send(JSON.stringify(audioMessage));
-              console.log(`📤 [${sessionId}] Sent ${event.delta.length} bytes audio to Twilio`);
-            } else {
-              console.log(`⚠️ [${sessionId}] Cannot send audio - Twilio WebSocket closed`);
-            }
-          }
-        } catch (error) {
-          console.error(`❌ [${sessionId}] Error processing OpenAI message:`, error);
-        }
-      });
-      
-      openaiWs.on('error', (error) => {
-        console.error(`❌ [${sessionId}] OpenAI WebSocket error:`, error);
-      });
-      
-      openaiWs.on('close', () => {
-        console.log(`🔌 [${sessionId}] OpenAI WebSocket disconnected`);
-      });
-      
-    } catch (error) {
-      console.error(`❌ [${sessionId}] Error initializing OpenAI session:`, error);
     }
+  );
+  
+  let streamSid = null;
+  
+  // Function to send session configuration to OpenAI
+  const sendSessionUpdate = () => {
+    const sessionUpdate = {
+      type: 'session.update',
+      session: {
+        turn_detection: { type: 'server_vad' },
+        input_audio_format: 'g711_ulaw',
+        output_audio_format: 'g711_ulaw',
+        voice: VOICE,
+        instructions: SYSTEM_MESSAGE,
+        modalities: ["text", "audio"],
+        temperature: 0.8,
+      }
+    };
+    
+    console.log(`📤 [${sessionId}] Sending session update to OpenAI`);
+    openAiWs.send(JSON.stringify(sessionUpdate));
   };
   
-  // IMMEDIATE DIAGNOSTICS ON WEBSOCKET CONNECT
-  console.log(`🔍 [${sessionId}] DIAGNOSTIC: Starting OpenAI connectivity check...`);
-  
-  // Test 1: Check API key
-  const apiKey = process.env.OPENAI_API_KEY;
-  console.log(`🔑 [${sessionId}] API Key check:`, {
-    exists: !!apiKey,
-    length: apiKey?.length || 0,
-    prefix: apiKey?.substring(0, 10) || 'N/A',
-    isProjectKey: apiKey?.startsWith('sk-proj-') || false,
-    isLegacyKey: apiKey?.startsWith('sk-') && !apiKey?.startsWith('sk-proj-') || false
+  // OpenAI WebSocket event handlers
+  openAiWs.on('open', () => {
+    console.log(`✅ [${sessionId}] Connected to OpenAI Realtime API`);
+    setTimeout(sendSessionUpdate, 250); // Send session config after connection stabilizes
   });
   
-  // Test 2: Basic OpenAI API test
-  if (apiKey) {
-    console.log(`🧪 [${sessionId}] Testing basic OpenAI API connectivity...`);
-    
-    fetch('https://api.openai.com/v1/models', {
-      headers: {
-        'Authorization': `Bearer ${apiKey}`,
-        'Content-Type': 'application/json'
-      }
-    })
-    .then(response => {
-      console.log(`📡 [${sessionId}] OpenAI Models API response:`, response.status, response.statusText);
-      if (!response.ok) {
-        return response.text().then(text => {
-          console.error(`❌ [${sessionId}] OpenAI API Error:`, text);
-        });
-      }
-      return response.json().then(data => {
-        console.log(`✅ [${sessionId}] OpenAI API working! Available models:`, data.data?.length || 0);
-      });
-    })
-    .catch(error => {
-      console.error(`💥 [${sessionId}] OpenAI API connectivity failed:`, error.message);
-    });
-    
-    // Test 3: Realtime Sessions API
-    setTimeout(() => {
-      console.log(`🎯 [${sessionId}] Testing OpenAI Realtime Sessions API...`);
+  openAiWs.on('message', (data) => {
+    try {
+      const response = JSON.parse(data);
       
-      fetch('https://api.openai.com/v1/realtime/sessions', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${apiKey}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          model: 'gpt-4o-realtime-preview',
-          voice: 'alloy'
-        })
-      })
-      .then(response => {
-        console.log(`🎤 [${sessionId}] OpenAI Realtime API response:`, response.status, response.statusText);
-        if (!response.ok) {
-          return response.text().then(text => {
-            console.error(`❌ [${sessionId}] Realtime API Error:`, text);
-          });
-        }
-        return response.json().then(data => {
-          console.log(`✅ [${sessionId}] Realtime API working! Session:`, data.id);
+      // Log important events
+      if (LOG_EVENT_TYPES.includes(response.type)) {
+        console.log(`🤖 [${sessionId}] OpenAI event: ${response.type}`);
+      }
+      
+      // Handle audio response from OpenAI
+      if (response.type === 'response.audio.delta' && response.delta) {
+        if (streamSid && ws.readyState === WebSocket.OPEN) {
+          const audioMessage = {
+            event: 'media',
+            streamSid: streamSid,
+            media: {
+              payload: response.delta
+            }
+          };
+          ws.send(JSON.stringify(audioMessage));
           
-          // Now try the actual initialization
-          console.log(`🚀 [${sessionId}] Diagnostics passed - starting actual OpenAI initialization...`);
-          initializeOpenAI().catch(error => {
-            console.error(`❌ [${sessionId}] OpenAI initialization failed after diagnostics:`, error);
-          });
-        });
-      })
-      .catch(error => {
-        console.error(`💥 [${sessionId}] Realtime API connectivity failed:`, error.message);
-      });
-    }, 1000);
-    
-  } else {
-    console.error(`❌ [${sessionId}] No OpenAI API key found - skipping initialization`);
-  }
-
-  // Handle Twilio Media Stream messages
+          // Log occasionally to avoid spam
+          if (Math.random() < 0.01) {
+            console.log(`🔊 [${sessionId}] Sent audio to Twilio (${response.delta.length} chars)`);
+          }
+        }
+      }
+      
+      // Handle other important events
+      if (response.type === 'input_audio_buffer.speech_started') {
+        console.log(`🎙️ [${sessionId}] User started speaking`);
+      }
+      
+      if (response.type === 'input_audio_buffer.speech_stopped') {
+        console.log(`🔇 [${sessionId}] User stopped speaking`);
+      }
+      
+      if (response.type === 'error') {
+        console.error(`❌ [${sessionId}] OpenAI error:`, response.error);
+      }
+      
+    } catch (error) {
+      console.error(`❌ [${sessionId}] Error processing OpenAI message:`, error);
+    }
+  });
+  
+  openAiWs.on('error', (error) => {
+    console.error(`❌ [${sessionId}] OpenAI WebSocket error:`, error);
+  });
+  
+  openAiWs.on('close', () => {
+    console.log(`🔌 [${sessionId}] OpenAI WebSocket closed`);
+  });
+  
+  // Twilio WebSocket event handlers
   ws.on('message', (message) => {
     try {
       const data = JSON.parse(message);
       
-      // ALWAYS LOG ALL EVENTS TO DEBUG
-      console.log(`📨🔍 [${sessionId}] Twilio event: ${data.event} (seq: ${data.sequenceNumber || 'N/A'})`);
-      
-      // Skip full data logging only for media events to avoid Railway rate limit
-      if (data.event !== 'media') {
-        console.log(`📋 [${sessionId}] Full Twilio data:`, JSON.stringify(data, null, 2));
-      }
-      
       switch (data.event) {
         case 'connected':
           console.log(`🔌 [${sessionId}] Connected to Twilio Media Stream`);
-          if (data.protocol) {
-            console.log(`📡 [${sessionId}] Protocol:`, data.protocol);
-          }
           break;
           
         case 'start':
           streamSid = data.streamSid;
-          streamStartTime = Date.now();
-          callSid = data.start?.callSid || 'unknown';
-          
-          console.log(`🎬🎬🎬 [${sessionId}] STREAM START EVENT RECEIVED!`);
-          console.log(`   - streamSid: ${streamSid}`);
-          console.log(`   - callSid: ${callSid}`);
-          console.log(`   - timestamp: ${new Date(streamStartTime).toISOString()}`);
-          console.log(`   - isOpenAIInitialized: ${isOpenAIInitialized}`);
-          console.log(`🔑 [${sessionId}] OpenAI API key available:`, process.env.OPENAI_API_KEY ? 'YES' : 'NO');
-          
-          if (!isOpenAIInitialized) {
-            console.log(`🚀💥 [${sessionId}] STARTING OpenAI initialization on STREAM START...`);
-            isOpenAIInitialized = true;
-            initializeOpenAI().catch(error => {
-              console.error(`❌💥 [${sessionId}] START OpenAI initialization failed:`, error);
-              isOpenAIInitialized = false; // Reset flag on failure
-            });
-            console.log(`✅💥 [${sessionId}] START OpenAI initialization triggered`);
-          } else {
-            console.log(`⚠️ [${sessionId}] OpenAI already initialized from WebSocket connect, skipping START event init`);
-          }
+          console.log(`🎬 [${sessionId}] Stream started: ${streamSid}`);
+          console.log(`📞 [${sessionId}] Call SID: ${data.start?.callSid}`);
           break;
           
         case 'media':
-          // Reduced logging to avoid Railway rate limit
-          if (Math.random() < 0.001) { // Log ~0.1% of media events
-            console.log(`🎵 [${sessionId}] Audio data received (streamSid: ${data.streamSid})`);
-          }
-          
-          // CRITICAL FALLBACK: Initialize OpenAI immediately on first media if no start event
-          if (!isOpenAIInitialized && data.streamSid) {
-            streamSid = data.streamSid;
-            streamStartTime = Date.now(); // Set start time here too
-            
-            console.log(`🚨 [${sessionId}] CRITICAL FALLBACK: No start event received!`);
-            console.log(`⚠️ [${sessionId}] Initializing OpenAI on FIRST MEDIA event`);
-            console.log(`   - streamSid: ${streamSid}`);
-            console.log(`   - timestamp: ${new Date(streamStartTime).toISOString()}`);
-            console.log(`🔑 [${sessionId}] OpenAI API key available:`, process.env.OPENAI_API_KEY ? 'YES' : 'NO');
-            
-            isOpenAIInitialized = true;
-            initializeOpenAI().catch(error => {
-              console.error(`❌ [${sessionId}] FALLBACK OpenAI initialization failed:`, error);
-              isOpenAIInitialized = false; // Reset flag on failure
-            });
-            
-            console.log(`✅ [${sessionId}] FALLBACK OpenAI initialization triggered`);
-          }
-          
           // Forward audio to OpenAI
-          if (openaiWs && openaiWs.readyState === WebSocket.OPEN) {
-            const audioEvent = {
+          if (openAiWs.readyState === WebSocket.OPEN) {
+            const audioMessage = {
               type: 'input_audio_buffer.append',
               audio: data.media.payload
             };
-            openaiWs.send(JSON.stringify(audioEvent));
+            openAiWs.send(JSON.stringify(audioMessage));
             
-            // Log very rarely to avoid Railway rate limit
-            if (Math.random() < 0.0001) { // Extremely rarely
-              console.log(`📤 [${sessionId}] Forwarded ${data.media.payload.length} bytes audio to OpenAI`);
+            // Log very rarely to avoid spam
+            if (Math.random() < 0.001) {
+              console.log(`📤 [${sessionId}] Forwarded audio to OpenAI`);
             }
-          } else if (isOpenAIInitialized) {
-            console.log(`⚠️ [${sessionId}] Cannot forward audio - OpenAI WebSocket not ready (state: ${openaiWs?.readyState})`);
           }
           break;
           
         case 'stop':
-          const streamEndTime = Date.now();
-          const streamDuration = streamStartTime ? (streamEndTime - streamStartTime) / 1000 : 'unknown';
-          const stopCallSid = data.stop?.callSid || 'unknown';
-          
-          console.log(`⏹️ [${sessionId}] STREAM STOPPED`);
-          console.log(`   - callSid: ${stopCallSid}`);
-          console.log(`   - streamSid: ${data.streamSid || 'unknown'}`);
-          console.log(`   - stream duration: ${streamDuration}s`);
-          console.log(`   - OpenAI connected: ${openaiConnectedTime ? 'YES' : 'NO'}`);
-          
-          if (openaiConnectedTime && streamStartTime) {
-            const openaiDelay = (openaiConnectedTime - streamStartTime) / 1000;
-            console.log(`⏰ [${sessionId}] TIMING ANALYSIS:`);
-            console.log(`   - OpenAI connection delay: ${openaiDelay}s`);
-            console.log(`   - Stream vs OpenAI: ${streamDuration > openaiDelay ? 'OK' : 'PROBLEM - Stream ended before OpenAI connected!'}`);
-          } else {
-            console.log(`❌ [${sessionId}] PROBLEM: OpenAI never connected during ${streamDuration}s stream`);
-          }
-          
-          if (openaiWs) {
-            console.log(`🔌 [${sessionId}] Closing OpenAI WebSocket...`);
-            openaiWs.close();
+          console.log(`⏹️ [${sessionId}] Stream stopped`);
+          if (openAiWs.readyState === WebSocket.OPEN) {
+            openAiWs.close();
           }
           break;
       }
     } catch (error) {
-      console.error(`❌ [${sessionId}] Error parsing message:`, error);
+      console.error(`❌ [${sessionId}] Error processing Twilio message:`, error);
     }
   });
   
   ws.on('close', () => {
-    console.log(`🔌 [${sessionId}] WebSocket disconnected`);
-    if (openaiWs) {
-      openaiWs.close();
+    console.log(`🔌 [${sessionId}] Twilio WebSocket closed`);
+    if (openAiWs.readyState === WebSocket.OPEN) {
+      openAiWs.close();
     }
   });
   
   ws.on('error', (error) => {
-    console.error(`❌ [${sessionId}] WebSocket error:`, error);
-    if (openaiWs) {
-      openaiWs.close();
+    console.error(`❌ [${sessionId}] Twilio WebSocket error:`, error);
+    if (openAiWs.readyState === WebSocket.OPEN) {
+      openAiWs.close();
     }
   });
 });
@@ -441,7 +242,7 @@ Mluvíš přirozeně a trpělivě. Čekáš na reakce studenta.`;
         type: 'server_vad',
         threshold: 0.5,
         prefix_padding_ms: 300,
-        silence_duration_ms: 500,
+        silence_duration_ms: 500
       },
       input_audio_format: 'pcm16',
       output_audio_format: 'pcm16',
@@ -450,78 +251,50 @@ Mluvíš přirozeně a trpělivě. Čekáš na reakce studenta.`;
       }
     };
 
-    console.log(`[${requestId}] 📡 Requesting ephemeral session from OpenAI...`);
+    console.log(`[${requestId}] 📤 Sending request to OpenAI...`);
 
-    // Call OpenAI Realtime Sessions API
-    const fetch = require('node-fetch');
+    // Create session using OpenAI API
     const response = await fetch('https://api.openai.com/v1/realtime/sessions', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`,
-        'Content-Type': 'application/json',
-        'OpenAI-Beta': 'realtime=v1'
+        'Content-Type': 'application/json'
       },
       body: JSON.stringify(sessionRequest)
     });
 
     if (!response.ok) {
-      const errorText = await response.text();
-      console.error(`[${requestId}] ❌ OpenAI API error:`, response.status, errorText);
-      
+      const error = await response.json().catch(() => ({ error: 'Unknown error' }));
+      console.error(`[${requestId}] ❌ OpenAI API error:`, error);
       return res.status(response.status).json({
-        error: 'OpenAI API error',
-        message: errorText,
-        requestId
+        error: 'Failed to create OpenAI session',
+        details: error
       });
     }
 
     const sessionData = await response.json();
     console.log(`[${requestId}] ✅ Session created:`, sessionData.id);
 
-    // Return session data to frontend
     res.json({
-      success: true,
-      session: sessionData,
-      requestId,
-      timestamp: new Date().toISOString()
+      sessionId: sessionData.id,
+      clientSecret: sessionData.client_secret,
+      expiresAt: sessionData.expires_at,
+      model: sessionData.model,
+      voice: sessionData.voice
     });
 
   } catch (error) {
-    const requestId = req.headers['x-request-id'] || 'unknown';
-    console.error(`[${requestId}] 💥 Session creation error:`, error);
-
-    if (error.name === 'ValidationError') {
-      return res.status(400).json({
-        error: 'Invalid request data',
-        details: error.message,
-        requestId
-      });
-    }
-
+    console.error('❌ Session creation error:', error);
     res.status(500).json({
       error: 'Internal server error',
-      message: error.message,
-      requestId
+      message: error.message
     });
   }
 });
 
 /**
- * GET /session/health
- * Health check pro session endpoint
- */
-router.get('/session/health', (req, res) => {
-  res.json({
-    status: 'healthy',
-    endpoint: '/session',
-    rateLimit: '30 req/min',
-    timestamp: new Date().toISOString()
-  });
-});
-
-/**
- * GET /voice
- * Twilio Voice webhook - vrací TwiML pro Media Stream
+ * GET/POST /voice
+ * Twilio webhook pro příchozí hovory
  */
 router.get('/voice', (req, res) => {
   const { CallSid, From, To } = req.query;
@@ -605,40 +378,38 @@ router.post('/voice', (req, res) => {
 
 /**
  * POST /status
- * Twilio status callback webhook
+ * Webhook pro status update hovorů
  */
 router.post('/status', (req, res) => {
   try {
-    const { CallSid, CallStatus, Duration, CallDuration } = req.body;
+    const { CallSid, CallStatus, CallDuration, Timestamp } = req.body;
     const requestId = req.headers['x-request-id'] || `status_${Date.now()}`;
-    
+
     console.log(`[${requestId}] 📊 CALL STATUS UPDATE:`);
     console.log(`   - CallSid: ${CallSid}`);
     console.log(`   - Status: ${CallStatus}`);
-    console.log(`   - Duration: ${Duration || 'N/A'}s (stream)`);
-    console.log(`   - CallDuration: ${CallDuration || 'N/A'}s (call)`);
+    console.log(`   - Duration: ${CallDuration}s (stream)`);
+    console.log(`   - CallDuration: ${req.body.Duration}s (call)`);
+
+    // Analyze duration discrepancy
+    const streamDuration = parseInt(CallDuration) || 0;
+    const callDuration = parseInt(req.body.Duration) || 0;
     
-    // Compare durations if both available
-    if (Duration && CallDuration && CallStatus === 'completed') {
-      const durationDiff = parseInt(CallDuration) - parseInt(Duration);
+    if (callDuration > 0 && streamDuration > 0) {
+      const difference = Math.abs(callDuration - streamDuration);
       console.log(`⚖️ [${requestId}] DURATION COMPARISON:`);
-      console.log(`   - Call lasted: ${CallDuration}s`);
-      console.log(`   - Stream lasted: ${Duration}s`);
-      console.log(`   - Difference: ${durationDiff}s`);
+      console.log(`   - Call lasted: ${callDuration}s`);
+      console.log(`   - Stream lasted: ${streamDuration}s`);
+      console.log(`   - Difference: ${difference}s`);
       
-      if (durationDiff > 5) {
+      if (difference > 5) {
         console.log(`❌ [${requestId}] PROBLEM: Stream much shorter than call - OpenAI connection issue!`);
-      } else if (durationDiff > 1) {
-        console.log(`⚠️ [${requestId}] WARNING: Stream shorter than call - possible connection delay`);
-      } else {
-        console.log(`✅ [${requestId}] OK: Stream duration matches call duration`);
       }
     }
 
-    // Log important status changes
     switch (CallStatus) {
       case 'ringing':
-        console.log(`[${requestId}] 🔔 Call ringing...`);
+        console.log(`[${requestId}] 📞 Call ringing...`);
         break;
       case 'in-progress':
         console.log(`[${requestId}] 🗣️ Call answered, stream should start soon...`);

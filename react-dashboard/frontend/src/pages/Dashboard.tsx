@@ -94,14 +94,6 @@ const Dashboard: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Import theme CSS
-  React.useEffect(() => {
-    const style = document.createElement('style');
-    style.textContent = `@import url('/src/ui/theme.css');`;
-    document.head.appendChild(style);
-    return () => document.head.removeChild(style);
-  }, []);
-
   useEffect(() => {
     const fetchDashboardStats = async () => {
       try {

@@ -155,14 +155,6 @@ const ResponsiveSidebar: React.FC<ResponsiveSidebarProps> = ({ children }) => {
 
   const menuItems = getMenuItems(user);
 
-  // Import theme CSS pro unified styling
-  React.useEffect(() => {
-    const style = document.createElement('style');
-    style.textContent = `@import url('/src/ui/theme.css');`;
-    document.head.appendChild(style);
-    return () => document.head.removeChild(style);
-  }, []);
-
   const drawer = (
     <div className="h-full bg-surface border-r border-gray-200 flex flex-col">
       {/* Logo and Brand */}

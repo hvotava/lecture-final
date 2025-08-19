@@ -357,42 +357,11 @@ router.post('/:id/call', auth, adminOnly, async (req, res) => {
     // Twilio integration
     if (twilioClient && process.env.TWILIO_PHONE_NUMBER) {
       try {
-        // Určit správnou backend URL pro webhooks
-        const getVoiceBackendUrl = () => {
-          // Pro lokální development
-          if (process.env.NODE_ENV === 'development') {
-            return 'http://localhost:8080';
-          }
-          // Voice webhook směřuje na Python WebRTC backend
-          return process.env.PYTHON_WEBRTC_BACKEND_URL || 'https://lecture-app-production.up.railway.app';
-        };
-
-        const getStatusBackendUrl = () => {
-          // Pro lokální development
-          if (process.env.NODE_ENV === 'development') {
-            return 'http://localhost:5000';
-          }
-          // Status callback směřuje na React dashboard server (kde je /api/twilio/status endpoint)
-          if (process.env.BACKEND_URL) {
-            return process.env.BACKEND_URL.startsWith('http') ? process.env.BACKEND_URL : `https://${process.env.BACKEND_URL}`;
-          }
-          if (process.env.RAILWAY_STATIC_URL) {
-            return process.env.RAILWAY_STATIC_URL.startsWith('http') ? process.env.RAILWAY_STATIC_URL : `https://${process.env.RAILWAY_STATIC_URL}`;
-          }
-          // Fallback pro React dashboard
-          return 'https://lecture-app-production.up.railway.app';
-        };
-
-        const voiceBackendUrl = getVoiceBackendUrl();
-        const statusBackendUrl = getStatusBackendUrl();
-        console.log('🔍 Using voice backend URL for Twilio webhooks:', voiceBackendUrl);
-        console.log('🔍 Using status backend URL for Twilio webhooks:', statusBackendUrl);
-        console.log('🎯 FINAL WebRTC Voice URL:', `${statusBackendUrl}/api/twilio/webrtc/voice/incoming`);
-
-        // Use local WebRTC endpoints (same server)
+        // CLEANED UP: Use single base URL for all webhooks
         const baseUrl = process.env.APP_BASE_URL || 'https://lecture-app-production-5f70.up.railway.app';
+        console.log('🔍 Using base URL for all Twilio webhooks:', baseUrl);
         
-        const webhookUrl = `${baseUrl}/api/webrtc/voice`;
+        const webhookUrl = `${baseUrl}/api/twilio/voice`;  // CHANGED: use twilio route (we redirected it)
         const statusUrl = `${baseUrl}/api/webrtc/status`;
         
         console.log(`🔗 Twilio webhook URLs:`);
@@ -412,8 +381,8 @@ router.post('/:id/call', auth, adminOnly, async (req, res) => {
         });
 
         console.log(`✅ Twilio call initiated to ${user.name} (${user.phone}): ${call.sid}`);
-        console.log(`📞 Voice webhook: ${statusBackendUrl}/api/twilio/voice/call-intelligent`);
-        console.log(`📊 Status webhook: ${statusBackendUrl}/api/twilio/status`);
+        console.log(`📞 ACTUAL Voice webhook: ${webhookUrl}`);
+        console.log(`📊 ACTUAL Status webhook: ${statusUrl}`);
 
         res.json({
           message: `Volání úspěšně zahájeno pro uživatele ${user.name} ${lessonInfo}`,

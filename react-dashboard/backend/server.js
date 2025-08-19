@@ -99,6 +99,12 @@ app.use('/api/dashboard', require('./routes/dashboard'));
 app.use('/api/twilio', twilioRoutes);
 app.use('/api/webrtc', webrtcRoutes);
 app.use('/api/twilio/webrtc', require('./routes/twilio-webrtc').router);
+
+// DEBUG: Log registered routes
+console.log('🛣️ REGISTERED ROUTES:');
+console.log('   - /api/webrtc/* (including /api/webrtc/voice)');
+console.log('   - WebRTC routes loaded from:', require.resolve('./routes/webrtc'));
+console.log('🛣️ Routes registration complete');
 app.use('/api/content', require('./routes/content'));
 app.use('/api/ai-proxy', require('./routes/ai-proxy'));
 app.use('/api/analytics', require('./routes/analytics'));

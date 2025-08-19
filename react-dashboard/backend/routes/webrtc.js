@@ -471,7 +471,14 @@ router.post('/voice', (req, res) => {
   const { CallSid, From, To } = req.body;
   const requestId = req.headers['x-request-id'] || `twilio_${Date.now()}`;
   
+  // FORCE CONSOLE LOGS - MULTIPLE WAYS
+  console.error(`🚨🚨🚨 [${requestId}] TWILIO VOICE WEBHOOK CALLED (POST)! 🚨🚨🚨`);
+  console.warn(`🚨🚨🚨 [${requestId}] TWILIO VOICE WEBHOOK CALLED (POST)! 🚨🚨🚨`);
+  console.info(`🚨🚨🚨 [${requestId}] TWILIO VOICE WEBHOOK CALLED (POST)! 🚨🚨🚨`);
   console.log(`🚨🚨🚨 [${requestId}] TWILIO VOICE WEBHOOK CALLED (POST)! 🚨🚨🚨`);
+  
+  process.stdout.write(`🚨🚨🚨 TWILIO WEBHOOK HIT! ${requestId}\n`);
+  
   console.log(`[${requestId}] 📞 Incoming Twilio call (POST):`, { CallSid, From, To });
   console.log(`[${requestId}] 🌐 Request URL:`, req.url);
   console.log(`[${requestId}] 📝 Body:`, req.body);

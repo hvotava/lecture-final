@@ -5,55 +5,43 @@ const router = express.Router();
 // Twilio VoiceResponse for handling voice calls
 const VoiceResponse = twilio.twiml.VoiceResponse;
 
-// Voice webhook - handles incoming calls and responses
+// Voice webhook - REDIRECT TO WEBRTC HANDLER
 router.post('/voice', (req, res) => {
-  const twiml = new VoiceResponse();
+  console.log('🚨🚨🚨 OLD TWILIO ROUTE /api/twilio/voice CALLED! 🚨🚨🚨');
+  console.log('🔄 REDIRECTING TO NEW WEBRTC HANDLER...');
+  console.log('📋 Body:', req.body);
   
-  // Determine language from caller's phone number
-  const callerNumber = req.body.From;
-  let language = 'cs-CZ'; // Default to Czech
-  let voice = 'Google.cs-CZ-Standard-A';
+  const { CallSid, From, To } = req.body;
+  const requestId = req.headers['x-request-id'] || `twilio_redirect_${Date.now()}`;
   
-  // Simple language detection based on country code
-  if (callerNumber && callerNumber.startsWith('+421')) {
-    language = 'sk-SK';
-    voice = 'Google.sk-SK-Standard-A';
-  } else if (callerNumber && callerNumber.startsWith('+1')) {
-    language = 'en-US';
-    voice = 'Google.en-US-Standard-A';
-  }
+  console.log(`[${requestId}] 📞 Redirecting Twilio call to WebRTC handler:`, { CallSid, From, To });
+
+  // Use the same WebRTC TwiML logic
+  const baseUrl = (process.env.APP_BASE_URL || `https://${req.get('host')}`).replace(/^https?:\/\//, '');
+  const wsUrl = `wss://${baseUrl}/api/webrtc/stream`;
+
+  // TwiML response s Media Stream - SAME AS WEBRTC HANDLER
+  const twiml = `<?xml version="1.0" encoding="UTF-8"?>
+<Response>
+  <Say voice="Google.cs-CZ-Standard-A" language="cs-CZ">
+    Vítejte v interaktivním školení. Připojuji vás k AI asistentovi.
+  </Say>
+  <Start>
+    <Stream 
+      name="openai_realtime_stream"
+      url="${wsUrl}"
+      track="both_tracks"
+    />
+  </Start>
+  <Pause length="3600"/>
+</Response>`;
+
+  console.log(`[${requestId}] 📡 WebSocket URL:`, wsUrl);
+  console.log(`[${requestId}] 📄 TwiML Response:`, twiml);
   
-  // Welcome message
-  const welcomeText = getWelcomeMessage(language);
-  
-  twiml.say({
-    voice: voice,
-    language: language
-  }, welcomeText);
-  
-  // Gather user input
-  const gather = twiml.gather({
-    numDigits: 1,
-    timeout: 10,
-    action: '/api/twilio/gather',
-    method: 'POST'
-  });
-  
-  gather.say({
-    voice: voice,
-    language: language
-  }, getMenuMessage(language));
-  
-  // If no input, repeat
-  twiml.say({
-    voice: voice,
-    language: language
-  }, getTimeoutMessage(language));
-  
-  twiml.hangup();
-  
+  // Return TwiML as XML
   res.type('text/xml');
-  res.send(twiml.toString());
+  res.send(twiml);
 });
 
 // Handle user input from voice menu

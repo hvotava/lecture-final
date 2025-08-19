@@ -98,7 +98,8 @@ app.use('/api/tests', require('./routes/tests'));
 app.use('/api/dashboard', require('./routes/dashboard'));
 app.use('/api/twilio', twilioRoutes);
 app.use('/api/webrtc', webrtcRoutes);
-app.use('/api/twilio/webrtc', require('./routes/twilio-webrtc').router);
+// DISABLED: Conflicting WebSocket handler - using /api/webrtc/stream instead
+// app.use('/api/twilio/webrtc', require('./routes/twilio-webrtc').router);
 
 // DEBUG: Log registered routes
 console.log('🛣️ REGISTERED ROUTES:');

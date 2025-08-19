@@ -12,8 +12,19 @@ import {
   Building2
 } from 'lucide-react';
 
+// Type definitions
+interface Plan {
+  label: string;
+  priceEUR: number | null;
+  minSeats: number;
+  description: string;
+  recommended: boolean;
+  platformFeeEUR?: number;
+  priceNote?: string;
+}
+
 // Plan definitions according to the prompt
-const plans = {
+const plans: Record<string, Plan> = {
   free: { 
     label: 'Free', 
     priceEUR: 0, 
@@ -44,7 +55,7 @@ const plans = {
     description: 'Velké firmy, compliance',
     recommended: false
   },
-} as const;
+};
 
 // Channel addon prices (configurable currency)
 const channelAddonUSD = { 
@@ -64,7 +75,7 @@ type Limits = {
   sttMin: number | string;
 };
 
-const limits: Record<keyof typeof plans, Limits> = {
+const limits: Record<string, Limits> = {
   free: { 
     webrtcMin: 20, 
     pstnMin: 5, 
@@ -96,7 +107,7 @@ const limits: Record<keyof typeof plans, Limits> = {
 };
 
 // Key features for each plan
-const features: Record<keyof typeof plans, string[]> = {
+const features: Record<string, string[]> = {
   free: [
     'Základní agent (1 scénář)',
     '1 kurz, mikro‑testy',
@@ -144,23 +155,23 @@ const channelInfo = {
 };
 
 export const Pricing: React.FC = () => {
-  const [selectedChannels, setSelectedChannels] = useState<Record<keyof typeof plans, ChannelKey>>({
+  const [selectedChannels, setSelectedChannels] = useState<Record<string, ChannelKey>>({
     free: 'web',
     starter: 'web',
     pro: 'web',
     enterprise: 'web'
   });
   
-  const [expandedPlans, setExpandedPlans] = useState<Set<keyof typeof plans>>(new Set());
+  const [expandedPlans, setExpandedPlans] = useState<Set<string>>(new Set());
 
-  const handleChannelChange = (planKey: keyof typeof plans, channel: ChannelKey) => {
+  const handleChannelChange = (planKey: string, channel: ChannelKey) => {
     setSelectedChannels(prev => ({
       ...prev,
       [planKey]: channel
     }));
   };
 
-  const togglePlanDetails = (planKey: keyof typeof plans) => {
+  const togglePlanDetails = (planKey: string) => {
     setExpandedPlans(prev => {
       const newSet = new Set(prev);
       if (newSet.has(planKey)) {
@@ -209,7 +220,7 @@ export const Pricing: React.FC = () => {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          {(Object.keys(plans) as Array<keyof typeof plans>).map((planKey, index) => {
+          {Object.keys(plans).map((planKey, index) => {
             const plan = plans[planKey];
             const planLimits = limits[planKey];
             const planFeatures = features[planKey];

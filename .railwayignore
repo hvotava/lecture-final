@@ -1,5 +1,10 @@
-# Ignore build artifacts and dependencies
+# RAILPACK CACHE FIX: Exclude ALL problematic directories
+# This prevents RAILPACK from trying to cache non-existent folders
+
+# Node.js dependencies and build artifacts
 node_modules/
+**/node_modules/
+**/node_modules/**
 react-dashboard/frontend/node_modules/
 react-dashboard/backend/node_modules/
 react-dashboard/frontend/build/
@@ -25,7 +30,37 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 
-# Cache directories
+# Cache directories - EXCLUDE ALL (this is the key fix)
 .cache/
 .npm/
-.yarn/ 
+.yarn/
+**/.cache/
+**/.npm/
+**/.yarn/
+**/cache/
+**/tmp/
+
+# Force exclude problematic directories
+**/node_modules/
+**/build/
+**/dist/
+**/.next/
+**/.nuxt/
+**/target/
+**/out/
+
+# Git and documentation
+.git/
+*.md
+!README.md
+
+# Docker files (force RAILPACK)
+Dockerfile*
+.dockerignore
+
+# Additional exclusions for RAILPACK
+**/coverage/
+**/test-results/
+**/playwright-report/
+**/.nyc_output/
+**/junit.xml 

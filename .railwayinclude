@@ -1,8 +1,11 @@
-# Railway explicit includes
-react-dashboard/frontend/public/
+# Explicitly include only necessary files for RAILPACK
 react-dashboard/frontend/src/
+react-dashboard/frontend/public/
+react-dashboard/frontend/package.json
+react-dashboard/frontend/package-lock.json
 react-dashboard/backend/
 package.json
 package-lock.json
 railway.json
-.npmrc 
+nixpacks.toml
+.node-version 

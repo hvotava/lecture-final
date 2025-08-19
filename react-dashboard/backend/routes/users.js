@@ -392,13 +392,21 @@ router.post('/:id/call', auth, adminOnly, async (req, res) => {
         // Use local WebRTC endpoints (same server)
         const baseUrl = process.env.APP_BASE_URL || 'https://lecture-app-production-5f70.up.railway.app';
         
+        const webhookUrl = `${baseUrl}/api/webrtc/voice`;
+        const statusUrl = `${baseUrl}/api/webrtc/status`;
+        
+        console.log(`🔗 Twilio webhook URLs:`);
+        console.log(`   - Voice webhook: ${webhookUrl}`);
+        console.log(`   - Status webhook: ${statusUrl}`);
+        console.log(`   - Base URL: ${baseUrl}`);
+        
         const call = await twilioClient.calls.create({
           to: user.phone,
           from: process.env.TWILIO_PHONE_NUMBER,
-          url: `${baseUrl}/api/webrtc/voice`,  // Local WebRTC endpoint
+          url: webhookUrl,
           method: 'GET',
           record: false, // WebRTC nepotřebuje record
-          statusCallback: `${baseUrl}/api/webrtc/status`,
+          statusCallback: statusUrl,
           statusCallbackEvent: ['initiated', 'ringing', 'answered', 'completed'],
           statusCallbackMethod: 'POST'
         });

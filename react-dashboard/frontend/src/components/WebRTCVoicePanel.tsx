@@ -24,11 +24,14 @@ import {
 } from '@mui/icons-material';
 
 interface OpenAISession {
-  id: string;
-  client_secret: {
+  sessionId: string;
+  clientSecret: {
     value: string;
     expires_at: string;
   };
+  expiresAt: string;
+  model: string;
+  voice: string;
 }
 
 interface WebRTCVoicePanelProps {
@@ -90,7 +93,7 @@ export const WebRTCVoicePanel: React.FC<WebRTCVoicePanelProps> = ({
     }
 
     const data = await response.json();
-    return data.session;
+    return data; // Return the session data directly
   };
 
   /**
@@ -153,7 +156,7 @@ export const WebRTCVoicePanel: React.FC<WebRTCVoicePanelProps> = ({
 
       // 1. Vytvoř session
       const session = await createSession();
-      console.log('✅ Session created:', session.id);
+      console.log('✅ Session created:', session.sessionId);
 
       // 2. Získej mikrofon
       const stream = await navigator.mediaDevices.getUserMedia({
@@ -229,7 +232,7 @@ export const WebRTCVoicePanel: React.FC<WebRTCVoicePanelProps> = ({
       const response = await fetch('https://api.openai.com/v1/realtime', {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${session.client_secret.value}`,
+          'Authorization': `Bearer ${session.clientSecret.value}`,
           'Content-Type': 'application/sdp'
         },
         body: offer.sdp

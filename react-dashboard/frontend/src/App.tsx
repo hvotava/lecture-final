@@ -319,12 +319,6 @@ function App() {
               }
             />
             
-            {/* Landing Page */}
-            <Route path="/" element={<LandingPage />} />
-            
-            {/* Register Page */}
-            <Route path="/register" element={<RegisterPage />} />
-            
             {/* Catch all route - redirect to landing for unauthenticated, dashboard for authenticated */}
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>

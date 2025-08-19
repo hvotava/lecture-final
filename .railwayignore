@@ -1,24 +1,67 @@
-# Python backup files that might confuse Railway's buildpack detection
-python-backup/
-*.py
-requirements.txt
-runtime.txt
-wsgi.py
-
 # Development files
 *.log
-.DS_Store
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Runtime data
+pids
+*.pid
+*.seed
+*.pid.lock
+
+# Coverage directory used by tools like istanbul
+coverage/
+
+# nyc test coverage
+.nyc_output
+
+# Dependency directories
+node_modules/
+
+# Optional npm cache directory
+.npm
+
+# Optional REPL history
+.node_repl_history
+
+# Output of 'npm pack'
+*.tgz
+
+# Yarn Integrity file
+.yarn-integrity
+
+# dotenv environment variables file
+.env
 .env.local
 .env.development.local
 .env.test.local
 .env.production.local
 
-# IDE files
+# macOS
+.DS_Store
+
+# Windows
+Thumbs.db
+
+# IDE
 .vscode/
 .idea/
 *.swp
 *.swo
 
-# Temporary files
+# Temporary folders
 tmp/
-temp/ 
+temp/
+
+# Build artifacts (will be rebuilt on Railway)
+react-dashboard/frontend/build/static/
+react-dashboard/frontend/build/asset-manifest.json
+
+# Documentation
+*.md
+!README.md
+
+# Git
+.git/
+.gitignore 

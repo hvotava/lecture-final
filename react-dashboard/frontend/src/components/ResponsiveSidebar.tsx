@@ -129,7 +129,7 @@ const ResponsiveSidebar: React.FC<ResponsiveSidebarProps> = ({ children }) => {
       }
     ];
 
-    if (canManageUsers(user)) {
+    if (canManageUsers(user.role)) {
       items.push({
         path: '/dashboard/users',
         text: 'Správa uživatelů',
@@ -138,7 +138,7 @@ const ResponsiveSidebar: React.FC<ResponsiveSidebarProps> = ({ children }) => {
       });
     }
 
-    if (canManageCompanies(user)) {
+    if (canManageCompanies(user.role)) {
       items.push({
         path: '/dashboard/companies',
         text: 'Správa firem',
@@ -147,7 +147,7 @@ const ResponsiveSidebar: React.FC<ResponsiveSidebarProps> = ({ children }) => {
       });
     }
 
-    if (canManageTrainings(user)) {
+    if (canManageTrainings(user.role)) {
       items.push({
         path: '/dashboard/trainings',
         text: 'Správa školení',
@@ -171,7 +171,7 @@ const ResponsiveSidebar: React.FC<ResponsiveSidebarProps> = ({ children }) => {
       }
     );
 
-    if (canViewAllData(user)) {
+    if (canViewAllData(user.role)) {
       items.push({
         path: '/dashboard/analytics',
         text: 'Analytika',

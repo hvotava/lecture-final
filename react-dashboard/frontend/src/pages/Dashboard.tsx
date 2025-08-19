@@ -149,7 +149,7 @@ const Dashboard: React.FC = () => {
           Dashboard
         </h1>
         <p className="text-large text-muted">
-          Vítejte zpět, {user?.username}! Zde je přehled vašeho systému.
+          Vítejte zpět, {user?.name}! Zde je přehled vašeho systému.
         </p>
       </div>
 

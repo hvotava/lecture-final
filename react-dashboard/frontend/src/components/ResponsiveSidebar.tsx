@@ -176,12 +176,12 @@ const ResponsiveSidebar: React.FC<ResponsiveSidebarProps> = ({ children }) => {
           <div className="flex items-center gap-3 mb-3">
             <div className="w-10 h-10 bg-gradient-to-br from-primary to-primary-light rounded-full flex items-center justify-center">
               <span className="text-white font-medium text-sm">
-                {user.username?.charAt(0).toUpperCase() || 'U'}
+                {user.name?.charAt(0).toUpperCase() || 'U'}
               </span>
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-medium font-medium text-primary truncate">
-                {user.username}
+                {user.name}
               </p>
               <p className="text-small text-muted">
                 {user.email}

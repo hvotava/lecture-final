@@ -125,14 +125,17 @@ router.ws('/stream', (ws, req) => {
     try {
       const data = JSON.parse(message);
       console.log(`📨 [${sessionId}] Twilio message:`, data.event);
+      console.log(`📋 [${sessionId}] Full Twilio data:`, JSON.stringify(data, null, 2));
       
       switch (data.event) {
         case 'start':
           streamSid = data.streamSid;
           console.log(`▶️ [${sessionId}] Stream started:`, streamSid);
           console.log(`🔑 [${sessionId}] OpenAI API key available:`, process.env.OPENAI_API_KEY ? 'YES' : 'NO');
+          console.log(`🚀 [${sessionId}] About to call initializeOpenAI()...`);
           // Initialize OpenAI connection
           initializeOpenAI();
+          console.log(`✅ [${sessionId}] initializeOpenAI() called`);
           break;
           
         case 'media':

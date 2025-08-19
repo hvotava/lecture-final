@@ -404,7 +404,7 @@ router.post('/:id/call', auth, adminOnly, async (req, res) => {
           to: user.phone,
           from: process.env.TWILIO_PHONE_NUMBER,
           url: webhookUrl,
-          method: 'GET',
+          method: 'POST',  // ZMĚNA: POST je standard pro Twilio
           record: false, // WebRTC nepotřebuje record
           statusCallback: statusUrl,
           statusCallbackEvent: ['initiated', 'ringing', 'answered', 'completed'],

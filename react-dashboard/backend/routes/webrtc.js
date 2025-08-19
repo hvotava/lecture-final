@@ -180,13 +180,95 @@ router.ws('/stream', (ws, req) => {
     }
   };
   
+  // IMMEDIATE DIAGNOSTICS ON WEBSOCKET CONNECT
+  console.log(`🔍 [${sessionId}] DIAGNOSTIC: Starting OpenAI connectivity check...`);
+  
+  // Test 1: Check API key
+  const apiKey = process.env.OPENAI_API_KEY;
+  console.log(`🔑 [${sessionId}] API Key check:`, {
+    exists: !!apiKey,
+    length: apiKey?.length || 0,
+    prefix: apiKey?.substring(0, 10) || 'N/A',
+    isProjectKey: apiKey?.startsWith('sk-proj-') || false,
+    isLegacyKey: apiKey?.startsWith('sk-') && !apiKey?.startsWith('sk-proj-') || false
+  });
+  
+  // Test 2: Basic OpenAI API test
+  if (apiKey) {
+    console.log(`🧪 [${sessionId}] Testing basic OpenAI API connectivity...`);
+    
+    fetch('https://api.openai.com/v1/models', {
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/json'
+      }
+    })
+    .then(response => {
+      console.log(`📡 [${sessionId}] OpenAI Models API response:`, response.status, response.statusText);
+      if (!response.ok) {
+        return response.text().then(text => {
+          console.error(`❌ [${sessionId}] OpenAI API Error:`, text);
+        });
+      }
+      return response.json().then(data => {
+        console.log(`✅ [${sessionId}] OpenAI API working! Available models:`, data.data?.length || 0);
+      });
+    })
+    .catch(error => {
+      console.error(`💥 [${sessionId}] OpenAI API connectivity failed:`, error.message);
+    });
+    
+    // Test 3: Realtime Sessions API
+    setTimeout(() => {
+      console.log(`🎯 [${sessionId}] Testing OpenAI Realtime Sessions API...`);
+      
+      fetch('https://api.openai.com/v1/realtime/sessions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${apiKey}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          model: 'gpt-4o-realtime-preview',
+          voice: 'alloy'
+        })
+      })
+      .then(response => {
+        console.log(`🎤 [${sessionId}] OpenAI Realtime API response:`, response.status, response.statusText);
+        if (!response.ok) {
+          return response.text().then(text => {
+            console.error(`❌ [${sessionId}] Realtime API Error:`, text);
+          });
+        }
+        return response.json().then(data => {
+          console.log(`✅ [${sessionId}] Realtime API working! Session:`, data.id);
+          
+          // Now try the actual initialization
+          console.log(`🚀 [${sessionId}] Diagnostics passed - starting actual OpenAI initialization...`);
+          initializeOpenAI().catch(error => {
+            console.error(`❌ [${sessionId}] OpenAI initialization failed after diagnostics:`, error);
+          });
+        });
+      })
+      .catch(error => {
+        console.error(`💥 [${sessionId}] Realtime API connectivity failed:`, error.message);
+      });
+    }, 1000);
+    
+  } else {
+    console.error(`❌ [${sessionId}] No OpenAI API key found - skipping initialization`);
+  }
+
   // Handle Twilio Media Stream messages
   ws.on('message', (message) => {
     try {
       const data = JSON.parse(message);
-      // Skip logging media events to avoid Railway rate limit
+      
+      // ALWAYS LOG ALL EVENTS TO DEBUG
+      console.log(`📨🔍 [${sessionId}] Twilio event: ${data.event} (seq: ${data.sequenceNumber || 'N/A'})`);
+      
+      // Skip full data logging only for media events to avoid Railway rate limit
       if (data.event !== 'media') {
-        console.log(`📨 [${sessionId}] Twilio message:`, data.event);
         console.log(`📋 [${sessionId}] Full Twilio data:`, JSON.stringify(data, null, 2));
       }
       
@@ -203,22 +285,23 @@ router.ws('/stream', (ws, req) => {
           streamStartTime = Date.now();
           callSid = data.start?.callSid || 'unknown';
           
-          console.log(`▶️ [${sessionId}] STREAM START EVENT`);
+          console.log(`🎬🎬🎬 [${sessionId}] STREAM START EVENT RECEIVED!`);
           console.log(`   - streamSid: ${streamSid}`);
           console.log(`   - callSid: ${callSid}`);
           console.log(`   - timestamp: ${new Date(streamStartTime).toISOString()}`);
+          console.log(`   - isOpenAIInitialized: ${isOpenAIInitialized}`);
           console.log(`🔑 [${sessionId}] OpenAI API key available:`, process.env.OPENAI_API_KEY ? 'YES' : 'NO');
           
           if (!isOpenAIInitialized) {
-            console.log(`🚀 [${sessionId}] Initializing OpenAI on STREAM START...`);
+            console.log(`🚀💥 [${sessionId}] STARTING OpenAI initialization on STREAM START...`);
             isOpenAIInitialized = true;
             initializeOpenAI().catch(error => {
-              console.error(`❌ [${sessionId}] OpenAI initialization failed:`, error);
+              console.error(`❌💥 [${sessionId}] START OpenAI initialization failed:`, error);
               isOpenAIInitialized = false; // Reset flag on failure
             });
-            console.log(`✅ [${sessionId}] OpenAI initialization triggered`);
+            console.log(`✅💥 [${sessionId}] START OpenAI initialization triggered`);
           } else {
-            console.log(`⚠️ [${sessionId}] OpenAI already initialized, skipping`);
+            console.log(`⚠️ [${sessionId}] OpenAI already initialized from WebSocket connect, skipping START event init`);
           }
           break;
           

@@ -424,4 +424,4 @@ const startServer = async () => {
 // setupTwilioWebSocket(server);
 
 startServer(); // Force Railway redeploy - Wed Aug  6 18:38:35 CEST 2025
-// FORCE REDEPLOY - Wed Aug  6 22:27:56 CEST 2025
+// FORCE REDEPLOY - Tue Aug 19 09:15:00 CEST 2025 - Fix WebSocket state

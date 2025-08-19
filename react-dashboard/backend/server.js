@@ -84,8 +84,8 @@ const authRoutes = require('./routes/auth');
 const userRoutes = require('./routes/users');
 const twilioRoutes = require('./routes/twilio');
 const webrtcRoutes = require('./routes/webrtc');
-// WebSocket handler
-const { setupTwilioWebSocket } = require('./websocket/twilioStream');
+// WebSocket handler - using Express-WS instead of custom handler
+// const { setupTwilioWebSocket } = require('./websocket/twilioStream');
 
 // Routes
 app.use('/api/auth', authRoutes);
@@ -416,8 +416,8 @@ const startServer = async () => {
   }
 };
 
-// Setup WebRTC WebSocket handler
-setupTwilioWebSocket(server);
+// Setup WebRTC WebSocket handler - now handled by Express-WS routes
+// setupTwilioWebSocket(server);
 
 startServer(); // Force Railway redeploy - Wed Aug  6 18:38:35 CEST 2025
 // FORCE REDEPLOY - Wed Aug  6 22:27:56 CEST 2025

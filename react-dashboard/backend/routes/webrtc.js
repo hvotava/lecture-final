@@ -17,6 +17,7 @@ router.ws('/stream', (ws, req) => {
   let openaiSession = null;
   let openaiWs = null;
   let streamSid = null;
+  let isOpenAIInitialized = false;
   
   // Initialize OpenAI Session using Sessions API (same as WebRTC dialog)
   const initializeOpenAI = async () => {
@@ -125,7 +126,10 @@ router.ws('/stream', (ws, req) => {
     try {
       const data = JSON.parse(message);
       console.log(`📨 [${sessionId}] Twilio message:`, data.event);
-      console.log(`📋 [${sessionId}] Full Twilio data:`, JSON.stringify(data, null, 2));
+      // Only log full data for non-media events to avoid rate limit
+      if (data.event !== 'media') {
+        console.log(`📋 [${sessionId}] Full Twilio data:`, JSON.stringify(data, null, 2));
+      }
       
       switch (data.event) {
         case 'start':
@@ -140,6 +144,18 @@ router.ws('/stream', (ws, req) => {
           
         case 'media':
           console.log(`🎵 [${sessionId}] Audio data received`);
+          
+          // Initialize OpenAI on first media event if not already done
+          if (!isOpenAIInitialized && data.streamSid) {
+            streamSid = data.streamSid;
+            console.log(`▶️ [${sessionId}] First media event - initializing OpenAI with streamSid:`, streamSid);
+            console.log(`🔑 [${sessionId}] OpenAI API key available:`, process.env.OPENAI_API_KEY ? 'YES' : 'NO');
+            console.log(`🚀 [${sessionId}] About to call initializeOpenAI()...`);
+            isOpenAIInitialized = true;
+            initializeOpenAI();
+            console.log(`✅ [${sessionId}] initializeOpenAI() called`);
+          }
+          
           // Forward audio to OpenAI
           if (openaiWs && openaiWs.readyState === WebSocket.OPEN) {
             const audioEvent = {

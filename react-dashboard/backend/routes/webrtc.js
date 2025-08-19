@@ -186,7 +186,7 @@ router.get('/voice', (req, res) => {
 
   // Získej base URL bez https:// pro WebSocket
   const baseUrl = (process.env.APP_BASE_URL || `https://${req.get('host')}`).replace(/^https?:\/\//, '');
-  const wsUrl = `wss://${baseUrl}/webrtc/stream`;
+  const wsUrl = `wss://${baseUrl}/api/webrtc/stream`;
 
   // TwiML response s Media Stream
   const twiml = `<?xml version="1.0" encoding="UTF-8"?>
@@ -221,7 +221,7 @@ router.post('/voice', (req, res) => {
 
   // Získej base URL bez https:// pro WebSocket
   const baseUrl = (process.env.APP_BASE_URL || `https://${req.get('host')}`).replace(/^https?:\/\//, '');
-  const wsUrl = `wss://${baseUrl}/webrtc/stream`;
+  const wsUrl = `wss://${baseUrl}/api/webrtc/stream`;
 
   // TwiML response s Media Stream
   const twiml = `<?xml version="1.0" encoding="UTF-8"?>

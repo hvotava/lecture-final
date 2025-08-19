@@ -98,8 +98,8 @@ const Dashboard: React.FC = () => {
     const fetchDashboardStats = async () => {
       try {
         setLoading(true);
-        const data = await dashboardAPI.getStats();
-        setStats(data);
+        const response = await dashboardAPI.getStats();
+        setStats(response.data);
       } catch (error) {
         console.error('Chyba při načítání dashboard stats:', error);
         setError('Nepodařilo se načíst statistiky dashboardu');

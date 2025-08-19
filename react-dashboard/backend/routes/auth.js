@@ -62,7 +62,7 @@ router.post('/register', [
   body('name').notEmpty().withMessage('Name is required'),
   body('email').isEmail().withMessage('Valid email is required'),
   body('password').isLength({ min: 6 }).withMessage('Password must be at least 6 characters'),
-  body('role').optional().isIn(['admin', 'user']).withMessage('Invalid role'),
+  body('role').optional().isIn(['admin', 'superuser', 'contact_person', 'regular_user']).withMessage('Invalid role'),
   body('companyId').optional().isInt().withMessage('Invalid company ID')
 ], async (req, res) => {
   try {
@@ -71,7 +71,7 @@ router.post('/register', [
       return res.status(400).json({ errors: errors.array() });
     }
 
-    const { name, email, password, role = 'user', companyId } = req.body;
+    const { name, email, password, role = 'regular_user', companyId } = req.body;
 
     // Zkontroluj, jestli email už neexistuje
     const existingUser = await User.findOne({ where: { email } });

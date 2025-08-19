@@ -138,20 +138,13 @@ function App() {
         <Router>
           <Routes>
             {/* Public routes */}
+            <Route path="/" element={<LandingPage />} />
             <Route path="/login" element={<Login />} />
+            <Route path="/register" element={<RegisterPage />} />
             
             {/* Protected routes with ResponsiveSidebar */}
             <Route
-              path="/"
-              element={
-                <ProtectedRoute>
-                  <Navigate to="/dashboard" replace />
-                </ProtectedRoute>
-              }
-            />
-            
-            <Route
-              path="/app"
+              path="/dashboard"
               element={
                 <ProtectedRoute>
                   <ResponsiveSidebar>
@@ -159,10 +152,6 @@ function App() {
                   </ResponsiveSidebar>
                 </ProtectedRoute>
               }
-            />
-            <Route
-              path="/dashboard"
-              element={<Navigate to="/app" replace />}
             />
             
             <Route

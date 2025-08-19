@@ -21,7 +21,7 @@ const Login: React.FC = () => {
 
     try {
       await login(email, password);
-      navigate('/app');
+      navigate('/dashboard');
     } catch (error: any) {
       console.error('Login failed:', error);
       

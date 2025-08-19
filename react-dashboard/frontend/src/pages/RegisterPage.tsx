@@ -6,7 +6,7 @@ import { useAuth } from '../contexts/AuthContext';
 
 const RegisterPage: React.FC = () => {
   const [formData, setFormData] = useState({
-    username: '',
+    name: '',
     email: '',
     password: '',
     confirmPassword: ''
@@ -44,8 +44,8 @@ const RegisterPage: React.FC = () => {
     setLoading(true);
 
     try {
-      await register(formData.username, formData.email, formData.password);
-      navigate('/app');
+      await register(formData.name, formData.email, formData.password);
+      navigate('/dashboard');
     } catch (error: any) {
       console.error('Registration failed:', error);
       
@@ -123,21 +123,21 @@ const RegisterPage: React.FC = () => {
             <form onSubmit={handleSubmit} className="space-y-6">
               {/* Username Field */}
               <div>
-                <label htmlFor="username" className="block text-medium font-medium text-primary mb-2">
-                  Uživatelské jméno
+                <label htmlFor="name" className="block text-medium font-medium text-primary mb-2">
+                  Jméno
                 </label>
                 <div className="relative">
                   <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                     <User size={20} className="text-muted" />
                   </div>
                   <input
-                    id="username"
-                    name="username"
+                    id="name"
+                    name="name"
                     type="text"
-                    value={formData.username}
+                    value={formData.name}
                     onChange={handleChange}
                     className="input-field pl-12 focus-ring"
-                    placeholder="Vaše uživatelské jméno"
+                    placeholder="Vaše jméno"
                     required
                     disabled={loading}
                   />

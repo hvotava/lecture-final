@@ -21,11 +21,7 @@ const Company = sequelize.define('Company', {
       len: [8, 8] // IČO má 8 číslic
     }
   },
-  contactPersonId: {
-    type: DataTypes.INTEGER,
-    allowNull: true,
-    // Bude nastaveno přes asociaci později
-  },
+  // contactPersonId removed - use User.role === 'contact_person' && User.companyId instead
   created_at: {
     type: DataTypes.DATE,
     defaultValue: DataTypes.NOW
@@ -218,7 +214,7 @@ const Test = sequelize.define('Test', {
   lessonId: {
     type: DataTypes.INTEGER,
     references: {
-      model: 'lessons', // Název tabulky (správný název)
+      model: Lesson,  // Use model reference for consistency
       key: 'id'
     },
     allowNull: false
@@ -270,7 +266,11 @@ const UserTraining = sequelize.define('UserTraining', {
   },
   progress: {
     type: DataTypes.INTEGER,
-    defaultValue: 0  // 0-100%
+    defaultValue: 0,
+    validate: {
+      min: 0,
+      max: 100
+    }
   },
   completed: {
     type: DataTypes.BOOLEAN,
@@ -286,7 +286,14 @@ const UserTraining = sequelize.define('UserTraining', {
   }
 }, {
   tableName: 'user_trainings',
-  timestamps: false
+  timestamps: false,
+  indexes: [
+    {
+      unique: true,
+      fields: ['userId', 'trainingId'],
+      name: 'unique_user_training'
+    }
+  ]
 });
 
 // Původní modely pro kompatibilitu
@@ -454,7 +461,7 @@ const Answer = sequelize.define('Answer', {
 // Company associations
 Company.hasMany(User, { foreignKey: 'companyId' });
 Company.hasMany(Training, { foreignKey: 'companyId' });
-Company.belongsTo(User, { as: 'ContactPerson', foreignKey: 'contactPersonId' });
+// ContactPerson relationship handled via User.role === 'contact_person' && User.companyId
 
 // User associations
 User.belongsTo(Company, { foreignKey: 'companyId' });
@@ -494,19 +501,12 @@ TestSession.belongsTo(Attempt, { foreignKey: 'attempt_id' });
 
 Answer.belongsTo(Attempt, { foreignKey: 'attempt_id' });
 
-// TestResponse model - TEMPORARILY DISABLED for deployment
-// const TestResponse = require('./TestResponse')(sequelize);
-
-// TestResult model
+// TestResult model (TestResponse removed as duplicate)
 const TestResult = require('./TestResult');
 
-// TestResponse associations - TEMPORARILY DISABLED
-// TestResponse.belongsTo(User, { foreignKey: 'userId' });
-// User.hasMany(TestResponse, { foreignKey: 'userId' });
-
-// TestResult associations - DISABLED until Users table exists
-// TestResult.belongsTo(User, { foreignKey: 'userId' });
-// User.hasMany(TestResult, { foreignKey: 'userId' });
+// TestResult associations - ACTIVATED
+TestResult.belongsTo(User, { foreignKey: 'userId' });
+User.hasMany(TestResult, { foreignKey: 'userId' });
 
 module.exports = {
   sequelize,
@@ -520,5 +520,4 @@ module.exports = {
   TestSession,
   Answer,
   TestResult
-  // TestResponse - TEMPORARILY DISABLED for deployment
 }; 

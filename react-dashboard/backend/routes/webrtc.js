@@ -4,6 +4,43 @@ const WebSocket = require('ws');
 
 const router = express.Router();
 
+/**
+ * DEBUG endpoint - kontrola WebRTC konfigurace
+ */
+router.get('/debug', (req, res) => {
+  console.log('🔍 WebRTC Debug endpoint called');
+  
+  const config = {
+    timestamp: new Date().toISOString(),
+    environment: {
+      NODE_ENV: process.env.NODE_ENV,
+      OPENAI_API_KEY: process.env.OPENAI_API_KEY ? 'SET (length: ' + process.env.OPENAI_API_KEY.length + ')' : 'NOT SET',
+      TWILIO_ACCOUNT_SID: process.env.TWILIO_ACCOUNT_SID ? 'SET' : 'NOT SET',
+      TWILIO_AUTH_TOKEN: process.env.TWILIO_AUTH_TOKEN ? 'SET' : 'NOT SET',
+      TWILIO_PHONE_NUMBER: process.env.TWILIO_PHONE_NUMBER || 'NOT SET',
+      APP_BASE_URL: process.env.APP_BASE_URL || 'NOT SET'
+    },
+    webrtc_config: {
+      voice: VOICE,
+      system_message: SYSTEM_MESSAGE,
+      websocket_url: `/api/webrtc/stream`
+    },
+    status: {
+      openai_ready: !!process.env.OPENAI_API_KEY,
+      twilio_ready: !!(process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN),
+      overall_status: !!process.env.OPENAI_API_KEY && !!process.env.TWILIO_ACCOUNT_SID ? 'READY' : 'MISSING_CONFIG'
+    }
+  };
+
+  console.log('🔍 WebRTC Configuration:', JSON.stringify(config, null, 2));
+
+  res.json({
+    success: true,
+    message: 'WebRTC Debug Information',
+    data: config
+  });
+});
+
 // Configuration constants
 const SYSTEM_MESSAGE = 'Jste AI asistent pro vzdělávací platformu. Mluvte česky a buďte nápomocní. Veď interaktivní konverzaci přes telefon. Udržujte odpovědi krátké a přirozené.';
 const VOICE = 'alloy';

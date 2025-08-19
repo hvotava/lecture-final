@@ -588,4 +588,90 @@ router.get('/health', (req, res) => {
   });
 });
 
+/**
+ * GET /test-openai
+ * Test OpenAI API connectivity from Railway server
+ */
+router.get('/test-openai', async (req, res) => {
+  try {
+    console.log('🧪 Testing OpenAI API connectivity...');
+    console.log('🔑 OpenAI API key available:', process.env.OPENAI_API_KEY ? 'YES' : 'NO');
+    
+    if (!process.env.OPENAI_API_KEY) {
+      return res.json({
+        status: 'error',
+        message: 'OPENAI_API_KEY not set in environment variables',
+        timestamp: new Date().toISOString()
+      });
+    }
+    
+    // Test 1: Basic API connectivity
+    const fetch = require('node-fetch');
+    const modelsResponse = await fetch('https://api.openai.com/v1/models', {
+      headers: {
+        'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`,
+        'Content-Type': 'application/json'
+      }
+    });
+    
+    console.log('🧪 Models API response status:', modelsResponse.status);
+    
+    if (!modelsResponse.ok) {
+      const error = await modelsResponse.text();
+      console.error('❌ Models API error:', error);
+      return res.json({
+        status: 'error',
+        message: 'OpenAI API authentication failed',
+        details: error,
+        timestamp: new Date().toISOString()
+      });
+    }
+    
+    // Test 2: Realtime Sessions API
+    const sessionResponse = await fetch('https://api.openai.com/v1/realtime/sessions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        model: 'gpt-4o-realtime-preview',
+        voice: 'alloy'
+      })
+    });
+    
+    console.log('🧪 Sessions API response status:', sessionResponse.status);
+    
+    if (!sessionResponse.ok) {
+      const error = await sessionResponse.text();
+      console.error('❌ Sessions API error:', error);
+      return res.json({
+        status: 'partial',
+        message: 'Basic API works, but Realtime Sessions API failed',
+        details: error,
+        timestamp: new Date().toISOString()
+      });
+    }
+    
+    const sessionData = await sessionResponse.json();
+    console.log('✅ Sessions API success, session ID:', sessionData.id);
+    
+    res.json({
+      status: 'success',
+      message: 'OpenAI API fully functional',
+      sessionId: sessionData.id,
+      timestamp: new Date().toISOString()
+    });
+    
+  } catch (error) {
+    console.error('❌ OpenAI test error:', error);
+    res.json({
+      status: 'error',
+      message: 'Network or connection error',
+      details: error.message,
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
 module.exports = router; 

@@ -25,17 +25,24 @@ router.ws('/stream', (ws, req) => {
   console.log(`🔗🆕 [${sessionId}] BRAND NEW Twilio WebSocket connected via Express-WS`);
   console.log(`🔗🆕 [${sessionId}] Request URL:`, req.url);
   console.log(`🔗🆕 [${sessionId}] Connection timestamp:`, new Date().toISOString());
+  console.log(`🔗🆕 [${sessionId}] Request headers:`, JSON.stringify(req.headers, null, 2));
   
-  // FORCE reset state for each new WebSocket connection
+  // FORCE reset state for each new WebSocket connection - COMPLETELY ISOLATED
   let openaiSession = null;
   let openaiWs = null;
   let streamSid = null;
   let isOpenAIInitialized = false;
   let streamStartTime = null;
   let openaiConnectedTime = null;
+  let callSid = null;
   
-  console.log(`🔄🆕 [${sessionId}] FORCE RESET fresh state - isOpenAIInitialized:`, isOpenAIInitialized);
-  console.log(`🔄🆕 [${sessionId}] All variables reset: openaiSession=${openaiSession}, openaiWs=${openaiWs}, streamSid=${streamSid}`);
+  console.log(`🔄🆕 [${sessionId}] COMPLETE STATE RESET:`);
+  console.log(`   - openaiSession: ${openaiSession}`);
+  console.log(`   - openaiWs: ${openaiWs}`);
+  console.log(`   - streamSid: ${streamSid}`);
+  console.log(`   - isOpenAIInitialized: ${isOpenAIInitialized}`);
+  console.log(`   - streamStartTime: ${streamStartTime}`);
+  console.log(`   - openaiConnectedTime: ${openaiConnectedTime}`);
   
   // Initialize OpenAI Session using Sessions API (same as WebRTC dialog)
   const initializeOpenAI = async () => {
@@ -157,21 +164,22 @@ router.ws('/stream', (ws, req) => {
       }
       
       switch (data.event) {
-        case 'start':
-          streamSid = data.streamSid;
-          console.log(`▶️ [${sessionId}] Stream started:`, streamSid);
-          console.log(`🔑 [${sessionId}] OpenAI API key available:`, process.env.OPENAI_API_KEY ? 'YES' : 'NO');
-          console.log(`🚀 [${sessionId}] About to call initializeOpenAI()...`);
-          // Initialize OpenAI connection
-          initializeOpenAI();
-          console.log(`✅ [${sessionId}] initializeOpenAI() called`);
+        case 'connected':
+          console.log(`🔌 [${sessionId}] Connected to Twilio Media Stream`);
+          if (data.protocol) {
+            console.log(`📡 [${sessionId}] Protocol:`, data.protocol);
+          }
           break;
           
         case 'start':
           streamSid = data.streamSid;
           streamStartTime = Date.now();
-          console.log(`▶️ [${sessionId}] STREAM START EVENT - streamSid:`, streamSid);
-          console.log(`⏰ [${sessionId}] Stream start time:`, new Date(streamStartTime).toISOString());
+          callSid = data.start?.callSid || 'unknown';
+          
+          console.log(`▶️ [${sessionId}] STREAM START EVENT`);
+          console.log(`   - streamSid: ${streamSid}`);
+          console.log(`   - callSid: ${callSid}`);
+          console.log(`   - timestamp: ${new Date(streamStartTime).toISOString()}`);
           console.log(`🔑 [${sessionId}] OpenAI API key available:`, process.env.OPENAI_API_KEY ? 'YES' : 'NO');
           
           if (!isOpenAIInitialized) {
@@ -212,16 +220,25 @@ router.ws('/stream', (ws, req) => {
         case 'stop':
           const streamEndTime = Date.now();
           const streamDuration = streamStartTime ? (streamEndTime - streamStartTime) / 1000 : 'unknown';
-          console.log(`⏹️ [${sessionId}] Stream stopped`);
-          console.log(`⏰ [${sessionId}] Stream duration: ${streamDuration}s`);
-          console.log(`⏰ [${sessionId}] OpenAI connected time: ${openaiConnectedTime ? new Date(openaiConnectedTime).toISOString() : 'never'}`);
+          const stopCallSid = data.stop?.callSid || 'unknown';
+          
+          console.log(`⏹️ [${sessionId}] STREAM STOPPED`);
+          console.log(`   - callSid: ${stopCallSid}`);
+          console.log(`   - streamSid: ${data.streamSid || 'unknown'}`);
+          console.log(`   - stream duration: ${streamDuration}s`);
+          console.log(`   - OpenAI connected: ${openaiConnectedTime ? 'YES' : 'NO'}`);
           
           if (openaiConnectedTime && streamStartTime) {
             const openaiDelay = (openaiConnectedTime - streamStartTime) / 1000;
-            console.log(`⏰ [${sessionId}] OpenAI connection delay: ${openaiDelay}s`);
+            console.log(`⏰ [${sessionId}] TIMING ANALYSIS:`);
+            console.log(`   - OpenAI connection delay: ${openaiDelay}s`);
+            console.log(`   - Stream vs OpenAI: ${streamDuration > openaiDelay ? 'OK' : 'PROBLEM - Stream ended before OpenAI connected!'}`);
+          } else {
+            console.log(`❌ [${sessionId}] PROBLEM: OpenAI never connected during ${streamDuration}s stream`);
           }
           
           if (openaiWs) {
+            console.log(`🔌 [${sessionId}] Closing OpenAI WebSocket...`);
             openaiWs.close();
           }
           break;
@@ -447,33 +464,49 @@ router.post('/voice', (req, res) => {
  */
 router.post('/status', (req, res) => {
   try {
-    const { CallSid, CallStatus, Duration } = req.body;
+    const { CallSid, CallStatus, Duration, CallDuration } = req.body;
     const requestId = req.headers['x-request-id'] || `status_${Date.now()}`;
     
-    console.log(`[${requestId}] 📊 Call status update:`, { 
-      CallSid, 
-      CallStatus, 
-      Duration: Duration ? `${Duration}s` : 'N/A'
-    });
-    console.log(`[${requestId}] 📋 Full request body:`, req.body);
+    console.log(`[${requestId}] 📊 CALL STATUS UPDATE:`);
+    console.log(`   - CallSid: ${CallSid}`);
+    console.log(`   - Status: ${CallStatus}`);
+    console.log(`   - Duration: ${Duration || 'N/A'}s (stream)`);
+    console.log(`   - CallDuration: ${CallDuration || 'N/A'}s (call)`);
+    
+    // Compare durations if both available
+    if (Duration && CallDuration && CallStatus === 'completed') {
+      const durationDiff = parseInt(CallDuration) - parseInt(Duration);
+      console.log(`⚖️ [${requestId}] DURATION COMPARISON:`);
+      console.log(`   - Call lasted: ${CallDuration}s`);
+      console.log(`   - Stream lasted: ${Duration}s`);
+      console.log(`   - Difference: ${durationDiff}s`);
+      
+      if (durationDiff > 5) {
+        console.log(`❌ [${requestId}] PROBLEM: Stream much shorter than call - OpenAI connection issue!`);
+      } else if (durationDiff > 1) {
+        console.log(`⚠️ [${requestId}] WARNING: Stream shorter than call - possible connection delay`);
+      } else {
+        console.log(`✅ [${requestId}] OK: Stream duration matches call duration`);
+      }
+    }
 
-  // Log important status changes
-  switch (CallStatus) {
-    case 'ringing':
-      console.log(`[${requestId}] 🔔 Call ringing...`);
-      break;
-    case 'in-progress':
-      console.log(`[${requestId}] 🗣️ Call answered, stream starting...`);
-      break;
-    case 'completed':
-      console.log(`[${requestId}] ✅ Call completed after ${Duration || '?'}s`);
-      break;
-    case 'busy':
-    case 'no-answer':
-    case 'failed':
-      console.log(`[${requestId}] ❌ Call failed: ${CallStatus}`);
-      break;
-  }
+    // Log important status changes
+    switch (CallStatus) {
+      case 'ringing':
+        console.log(`[${requestId}] 🔔 Call ringing...`);
+        break;
+      case 'in-progress':
+        console.log(`[${requestId}] 🗣️ Call answered, stream should start soon...`);
+        break;
+      case 'completed':
+        console.log(`[${requestId}] ✅ Call completed`);
+        break;
+      case 'busy':
+      case 'no-answer':
+      case 'failed':
+        console.log(`[${requestId}] ❌ Call failed: ${CallStatus}`);
+        break;
+    }
 
   // Twilio očekává 200 OK response
   res.status(200).send('OK');

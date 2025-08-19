@@ -1,5 +1,5 @@
 [phases.setup]
-nixPkgs = ["nodejs", "npm"]
+nixFile = ".nixpacks/nixpacks.nix"
 
 [phases.install]
 cmds = ["npm ci --prefer-offline=false --no-audit --cache /tmp/.npm-cache"]

@@ -20,5 +20,9 @@
     "react",
     "dashboard"
   ],
-  "license": "ISC"
+  "license": "ISC",
+  "railway": {
+    "builder": "nixpacks",
+    "buildCommand": "npm ci --prefer-offline=false --no-audit --cache /tmp/.npm-cache && npm run build"
+  }
 } 

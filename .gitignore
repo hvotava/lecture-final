@@ -1,3 +1,4 @@
+# Environment
 .env
 __pycache__/
 *.pyc
@@ -33,8 +34,12 @@ instance/
 .railway/ .env.backup
 .env.backup
 
-# Node.js
+# Node.js - exclude node_modules but keep .gitkeep
 node_modules/
+**/node_modules/
+!**/node_modules/.gitkeep
+
+# npm
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*

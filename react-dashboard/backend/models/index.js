@@ -468,7 +468,7 @@ User.belongsTo(Company, { foreignKey: 'companyId' });
 User.hasMany(UserTraining, { foreignKey: 'userId' });
 User.hasMany(Attempt, { foreignKey: 'user_id' });
 User.hasMany(TestSession, { foreignKey: 'user_id' });
-User.hasMany(Company, { as: 'ManagedCompanies', foreignKey: 'contactPersonId' });
+// ContactPerson relationship handled via User.role === 'contact_person' && User.companyId
 
 // Training associations
 Training.belongsTo(Company, { foreignKey: 'companyId' });

@@ -28,12 +28,6 @@ router.get('/', auth, adminOnly, async (req, res) => {
           required: false
         },
         {
-          model: User,
-          as: 'ContactPerson',
-          attributes: ['id', 'name', 'email'],
-          required: false
-        },
-        {
           model: Training,
           attributes: ['id', 'title', 'category'],
           required: false
@@ -87,8 +81,7 @@ router.post('/', [
   body('name').notEmpty().withMessage('Company name is required'),
   body('ico').optional().isLength({ min: 8, max: 8 }).isNumeric()
     .withMessage('IČO must be exactly 8 digits'),
-  body('contactPersonId').optional().isInt()
-    .withMessage('Contact person ID must be a valid integer')
+
 ], async (req, res) => {
   try {
     const errors = validationResult(req);
@@ -96,7 +89,7 @@ router.post('/', [
       return res.status(400).json({ errors: errors.array() });
     }
 
-    const { name, ico, contactPersonId } = req.body;
+    const { name, ico } = req.body;
 
     // Zkontroluj, jestli společnost už neexistuje
     const existingCompany = await Company.findOne({ 
@@ -117,28 +110,20 @@ router.post('/', [
       }
     }
 
-    // Zkontroluj contact person, pokud je zadán
-    if (contactPersonId) {
-      const contactPerson = await User.findByPk(contactPersonId);
-      if (!contactPerson) {
-        return res.status(400).json({ error: 'Contact person not found' });
-      }
-      if (!['contact_person', 'superuser', 'admin'].includes(contactPerson.role)) {
-        return res.status(400).json({ 
-          error: 'Contact person must have appropriate role (contact_person, superuser, or admin)' 
-        });
-      }
-    }
+    const company = await Company.create({ name, ico });
 
-    const company = await Company.create({ name, ico, contactPersonId });
-
-    // Include contact person data in response
+    // Include users and trainings in response
     const createdCompany = await Company.findByPk(company.id, {
       include: [
         {
           model: User,
-          as: 'ContactPerson',
-          attributes: ['id', 'name', 'email', 'role']
+          attributes: ['id', 'name', 'email', 'role'],
+          required: false
+        },
+        {
+          model: Training,
+          attributes: ['id', 'title', 'category'],
+          required: false
         }
       ]
     });
@@ -160,8 +145,7 @@ router.put('/:id', [
   body('name').optional().notEmpty().withMessage('Company name cannot be empty'),
   body('ico').optional().isLength({ min: 8, max: 8 }).isNumeric()
     .withMessage('IČO must be exactly 8 digits'),
-  body('contactPersonId').optional().isInt()
-    .withMessage('Contact person ID must be a valid integer')
+
 ], async (req, res) => {
   try {
     const errors = validationResult(req);
@@ -174,30 +158,22 @@ router.put('/:id', [
       return res.status(404).json({ error: 'Company not found' });
     }
 
-    const { name, ico, contactPersonId } = req.body;
+    const { name, ico } = req.body;
 
-    // Zkontroluj contact person, pokud je zadán
-    if (contactPersonId) {
-      const contactPerson = await User.findByPk(contactPersonId);
-      if (!contactPerson) {
-        return res.status(400).json({ error: 'Contact person not found' });
-      }
-      if (!['contact_person', 'superuser', 'admin'].includes(contactPerson.role)) {
-        return res.status(400).json({ 
-          error: 'Contact person must have appropriate role (contact_person, superuser, or admin)' 
-        });
-      }
-    }
+    await company.update({ name, ico });
 
-    await company.update({ name, ico, contactPersonId });
-
-    // Fetch updated company with contact person data
+    // Fetch updated company with users and trainings
     const updatedCompany = await Company.findByPk(company.id, {
       include: [
         {
           model: User,
-          as: 'ContactPerson',
-          attributes: ['id', 'name', 'email', 'role']
+          attributes: ['id', 'name', 'email', 'role'],
+          required: false
+        },
+        {
+          model: Training,
+          attributes: ['id', 'title', 'category'],
+          required: false
         }
       ]
     });
@@ -275,7 +251,7 @@ router.get('/contact-persons/available', auth, superuserOrAdmin, async (req, res
         email: person.email,
         role: person.role,
         companyName: person.Company?.name || null,
-        isAvailable: !person.Company || person.Company.contactPersonId !== person.id
+        isAvailable: person.role === 'contact_person' ? !person.Company : true
       }))
     });
   } catch (error) {

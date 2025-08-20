@@ -81,7 +81,7 @@ export const companiesAPI = {
   
   deleteCompany: (id: number) => api.delete(`/companies/${id}`),
   
-  getAvailableContactPersons: () => api.get('/companies/contact-persons/available'),
+
 };
 
 // Trainings API calls (rozšířené)

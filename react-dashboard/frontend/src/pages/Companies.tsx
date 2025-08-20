@@ -36,7 +36,7 @@ import {
 } from '@mui/icons-material';
 import { DataGrid, GridColDef, GridActionsCellItem } from '@mui/x-data-grid';
 import { companiesAPI } from '../services/api';
-import { Company, ContactPerson } from '../types';
+import { Company } from '../types';
 import { useAuth } from '../contexts/AuthContext';
 import { canManageCompanies } from '../utils/permissions';
 import { getRoleColor, getRoleDisplayName } from '../utils/permissions';
@@ -44,7 +44,6 @@ import { getRoleColor, getRoleDisplayName } from '../utils/permissions';
 interface CompanyFormData {
   name: string;
   ico: string;
-  contactPersonId: number | '';
 }
 
 const Companies: React.FC = () => {
@@ -53,14 +52,13 @@ const Companies: React.FC = () => {
   const { user } = useAuth();
   
   const [companies, setCompanies] = useState<Company[]>([]);
-  const [contactPersons, setContactPersons] = useState<ContactPerson[]>([]);
+
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingCompany, setEditingCompany] = useState<Company | null>(null);
   const [formData, setFormData] = useState<CompanyFormData>({
     name: '',
-    ico: '',
-    contactPersonId: ''
+    ico: ''
   });
   const [searchTerm, setSearchTerm] = useState('');
   const [snackbar, setSnackbar] = useState({
@@ -83,7 +81,6 @@ const Companies: React.FC = () => {
     }
     
     fetchCompanies();
-    fetchContactPersons();
   }, [canManage]);
 
   const fetchCompanies = async () => {
@@ -99,14 +96,7 @@ const Companies: React.FC = () => {
     }
   };
 
-  const fetchContactPersons = async () => {
-    try {
-      const response = await companiesAPI.getAvailableContactPersons();
-      setContactPersons(response.data.contactPersons);
-    } catch (error) {
-      console.error('Error fetching contact persons:', error);
-    }
-  };
+
 
   const showSnackbar = (message: string, severity: 'success' | 'error') => {
     setSnackbar({ open: true, message, severity });
@@ -121,15 +111,13 @@ const Companies: React.FC = () => {
       setEditingCompany(company);
       setFormData({
         name: company.name,
-        ico: company.ico || '',
-        contactPersonId: company.contactPersonId || ''
+        ico: company.ico || ''
       });
     } else {
       setEditingCompany(null);
       setFormData({
         name: '',
-        ico: '',
-        contactPersonId: ''
+        ico: ''
       });
     }
     setDialogOpen(true);
@@ -140,8 +128,7 @@ const Companies: React.FC = () => {
     setEditingCompany(null);
     setFormData({
       name: '',
-      ico: '',
-      contactPersonId: ''
+      ico: ''
     });
   };
 
@@ -149,8 +136,7 @@ const Companies: React.FC = () => {
     try {
       const submitData = {
         name: formData.name,
-        ico: formData.ico || undefined,
-        contactPersonId: formData.contactPersonId || undefined
+        ico: formData.ico || undefined
       };
 
       if (editingCompany) {
@@ -163,7 +149,7 @@ const Companies: React.FC = () => {
 
       handleCloseDialog();
       fetchCompanies();
-      fetchContactPersons(); // Refresh contact persons availability
+
     } catch (error: any) {
       console.error('Error saving company:', error);
       const errorMessage = error.response?.data?.error || 'Nepodařilo se uložit společnost';
@@ -180,7 +166,7 @@ const Companies: React.FC = () => {
       await companiesAPI.deleteCompany(company.id);
       showSnackbar('Společnost byla úspěšně smazána', 'success');
       fetchCompanies();
-      fetchContactPersons();
+      
     } catch (error: any) {
       console.error('Error deleting company:', error);
       const errorMessage = error.response?.data?.error || 'Nepodařilo se smazat společnost';
@@ -444,40 +430,7 @@ const Companies: React.FC = () => {
             inputProps={{ maxLength: 8, pattern: '[0-9]*' }}
             helperText="8 číslic"
           />
-          
-          <FormControl fullWidth margin="normal">
-            <InputLabel>Kontaktní osoba</InputLabel>
-            <Select
-              value={formData.contactPersonId}
-              onChange={(e) => setFormData({ ...formData, contactPersonId: e.target.value as number })}
-              label="Kontaktní osoba"
-            >
-              <MenuItem value="">
-                <em>Žádná</em>
-              </MenuItem>
-              {contactPersons.map((person) => (
-                <MenuItem 
-                  key={person.id} 
-                  value={person.id}
-                  disabled={!person.isAvailable && person.id !== formData.contactPersonId}
-                >
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, width: '100%' }}>
-                    <Box sx={{ flexGrow: 1 }}>
-                      <Typography variant="body2">{person.name}</Typography>
-                      <Typography variant="caption" color="text.secondary">
-                        {person.email}
-                      </Typography>
-                    </Box>
-                    <Chip 
-                      label={getRoleDisplayName(person.role)}
-                      color={getRoleColor(person.role)}
-                      size="small"
-                    />
-                  </Box>
-                </MenuItem>
-              ))}
-            </Select>
-          </FormControl>
+
         </DialogContent>
         <DialogActions>
           <Button onClick={handleCloseDialog}>Zrušit</Button>

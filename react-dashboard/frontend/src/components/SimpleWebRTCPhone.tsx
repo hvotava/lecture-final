@@ -27,10 +27,10 @@ const SimpleWebRTCPhone: React.FC<SimpleWebRTCPhoneProps> = ({
   const [isMuted, setIsMuted] = useState(false);
   const [isConnected, setIsConnected] = useState(false);
 
-  const mediaRecorder = useRef<MediaRecorder | null>(null);
-  const audioChunks = useRef<Blob[]>([]);
   const websocket = useRef<WebSocket | null>(null);
   const audioContext = useRef<AudioContext | null>(null);
+  const mediaStream = useRef<MediaStream | null>(null);
+  const processor = useRef<ScriptProcessorNode | null>(null);
   const durationInterval = useRef<NodeJS.Timeout | null>(null);
   const callId = useRef<string>('');
 
@@ -57,26 +57,58 @@ const SimpleWebRTCPhone: React.FC<SimpleWebRTCPhoneProps> = ({
     };
   }, [callState.status]);
 
-  const formatDuration = (seconds: number): string => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+  // Cleanup při unmount
+  useEffect(() => {
+    return () => {
+      endCall();
+    };
+  }, []);
+
+  // Konverze Float32Array na PCM16
+  const float32ToPCM16 = (float32Array: Float32Array): ArrayBuffer => {
+    const pcm16 = new Int16Array(float32Array.length);
+    for (let i = 0; i < float32Array.length; i++) {
+      // Clamp hodnoty mezi -1 a 1, pak konvertuj na 16-bit integer
+      const sample = Math.max(-1, Math.min(1, float32Array[i]));
+      pcm16[i] = sample < 0 ? sample * 0x8000 : sample * 0x7FFF;
+    }
+    return pcm16.buffer;
   };
 
-  const connectToOpenAI = async (): Promise<void> => {
+  // Konverze PCM16 na base64
+  const arrayBufferToBase64 = (buffer: ArrayBuffer): string => {
+    const bytes = new Uint8Array(buffer);
+    let binary = '';
+    for (let i = 0; i < bytes.byteLength; i++) {
+      binary += String.fromCharCode(bytes[i]);
+    }
+    return btoa(binary);
+  };
+
+  const startCall = async (): Promise<void> => {
     try {
-      console.log('[SimpleWebRTC] Připojuji se k OpenAI přes backend...');
+      console.log('[SimpleWebRTC] Spouštím hovor...');
       
-      // Připojení na náš jednoduchý backend endpoint
-      const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-      const wsUrl = `${wsProtocol}//${window.location.host}/api/webrtc/simple`;
+      callId.current = `simple_${Date.now()}`;
+      setCallState({
+        status: 'connecting',
+        callId: callId.current,
+        duration: 0
+      });
+
+      // WebSocket připojení
+      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+      const host = window.location.host;
+      const wsUrl = `${protocol}//${host}/api/webrtc/simple`;
       
+      console.log('[SimpleWebRTC] Připojuji k:', wsUrl);
       websocket.current = new WebSocket(wsUrl);
 
       websocket.current.onopen = () => {
-        console.log('[SimpleWebRTC] WebSocket připojen k backend');
+        console.log('[SimpleWebRTC] WebSocket připojen');
         setIsConnected(true);
         setCallState(prev => ({ ...prev, status: 'connected' }));
+        onCallStart?.(callId.current);
         
         // Pošleme session update pro nastavení češtiny
         const sessionUpdate = {
@@ -113,6 +145,8 @@ const SimpleWebRTCPhone: React.FC<SimpleWebRTCPhoneProps> = ({
             playAudioDelta(data.delta);
           } else if (data.type === 'session.created') {
             console.log('[SimpleWebRTC] OpenAI session vytvořena');
+            // Spustíme nahrávání až po vytvoření session
+            startAudioRecording();
           } else if (data.type === 'error') {
             console.error('[SimpleWebRTC] OpenAI error:', data);
             onError?.(`OpenAI chyba: ${data.error?.message || 'Neznámá chyba'}`);
@@ -155,7 +189,7 @@ const SimpleWebRTCPhone: React.FC<SimpleWebRTCPhoneProps> = ({
         audioContext.current = new AudioContext();
       }
 
-      // Dekódování base64 audio dat
+      // Dekódování base64 PCM16 dat
       const binaryData = atob(audioData);
       const arrayBuffer = new ArrayBuffer(binaryData.length);
       const uint8Array = new Uint8Array(arrayBuffer);
@@ -164,8 +198,19 @@ const SimpleWebRTCPhone: React.FC<SimpleWebRTCPhoneProps> = ({
         uint8Array[i] = binaryData.charCodeAt(i);
       }
 
-      // Přehrání audio
-      const audioBuffer = await audioContext.current.decodeAudioData(arrayBuffer);
+      // Konverze PCM16 na Float32 pro Web Audio API
+      const pcm16Array = new Int16Array(arrayBuffer);
+      const float32Array = new Float32Array(pcm16Array.length);
+      
+      for (let i = 0; i < pcm16Array.length; i++) {
+        float32Array[i] = pcm16Array[i] / 32768.0; // Normalizace na -1 až 1
+      }
+
+      // Vytvoření audio buffer
+      const audioBuffer = audioContext.current.createBuffer(1, float32Array.length, 24000);
+      audioBuffer.getChannelData(0).set(float32Array);
+      
+      // Přehrání
       const source = audioContext.current.createBufferSource();
       source.buffer = audioBuffer;
       source.connect(audioContext.current.destination);
@@ -176,137 +221,106 @@ const SimpleWebRTCPhone: React.FC<SimpleWebRTCPhoneProps> = ({
     }
   };
 
-  const startRecording = async (): Promise<void> => {
+  const startAudioRecording = async (): Promise<void> => {
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({
+      console.log('[SimpleWebRTC] Spouštím nahrávání audio...');
+      
+      // Získání mikrofonu s přesnou konfigurací pro OpenAI
+      mediaStream.current = await navigator.mediaDevices.getUserMedia({
         audio: {
           echoCancellation: true,
           noiseSuppression: true,
           autoGainControl: true,
-          sampleRate: 24000
+          sampleRate: 24000,
+          channelCount: 1
         }
       });
 
-      mediaRecorder.current = new MediaRecorder(stream, {
-        mimeType: 'audio/webm'
+      // Vytvoření AudioContext s 24kHz sample rate
+      audioContext.current = new (window.AudioContext || (window as any).webkitAudioContext)({
+        sampleRate: 24000
       });
 
-      audioChunks.current = [];
-
-      mediaRecorder.current.ondataavailable = (event) => {
-        if (event.data.size > 0) {
-          audioChunks.current.push(event.data);
-          
-          // Převod na PCM16 a odeslání na server
-          event.data.arrayBuffer().then(buffer => {
-            if (websocket.current?.readyState === WebSocket.OPEN) {
-              // Pro jednoduchost pošleme jako base64
-              const reader = new FileReader();
-              reader.onloadend = () => {
-                const base64 = (reader.result as string).split(',')[1];
-                websocket.current?.send(JSON.stringify({
-                  type: 'input_audio_buffer.append',
-                  audio: base64
-                }));
-              };
-              reader.readAsDataURL(new Blob([buffer]));
-            }
-          });
+      const source = audioContext.current.createMediaStreamSource(mediaStream.current);
+      
+      // ScriptProcessorNode pro real-time audio processing
+      processor.current = audioContext.current.createScriptProcessor(4096, 1, 1);
+      
+      processor.current.onaudioprocess = (event) => {
+        if (isMuted || !websocket.current || websocket.current.readyState !== WebSocket.OPEN) {
+          return;
         }
+
+        const inputData = event.inputBuffer.getChannelData(0);
+        
+        // Konverze na PCM16
+        const pcm16Buffer = float32ToPCM16(inputData);
+        const base64Audio = arrayBufferToBase64(pcm16Buffer);
+        
+        // Odeslání na server
+        websocket.current.send(JSON.stringify({
+          type: 'input_audio_buffer.append',
+          audio: base64Audio
+        }));
       };
 
-      mediaRecorder.current.start(100); // Každých 100ms
-      console.log('[SimpleWebRTC] Nahrávání spuštěno');
+      // Připojení audio pipeline
+      source.connect(processor.current);
+      processor.current.connect(audioContext.current.destination);
+      
+      console.log('[SimpleWebRTC] Audio nahrávání spuštěno (24kHz, mono, PCM16)');
       
     } catch (error) {
       console.error('[SimpleWebRTC] Chyba při spuštění nahrávání:', error);
-      onError?.('Nepodařilo se získat přístup k mikrofonu');
-    }
-  };
-
-  const stopRecording = (): void => {
-    if (mediaRecorder.current && mediaRecorder.current.state !== 'inactive') {
-      mediaRecorder.current.stop();
-      mediaRecorder.current.stream.getTracks().forEach(track => track.stop());
-      console.log('[SimpleWebRTC] Nahrávání zastaveno');
-    }
-  };
-
-  const startCall = async (): Promise<void> => {
-    try {
-      const newCallId = `simple-webrtc-${Date.now()}`;
-      callId.current = newCallId;
-      
-      setCallState(prev => ({
-        ...prev,
-        status: 'connecting',
-        callId: newCallId,
-        duration: 0
-      }));
-
-      // Připojení k OpenAI
-      await connectToOpenAI();
-      
-      // Spuštění nahrávání
-      await startRecording();
-      
-      onCallStart?.(newCallId);
-      
-    } catch (error) {
-      console.error('[SimpleWebRTC] Chyba při zahájení hovoru:', error);
-      setCallState(prev => ({
-        ...prev,
-        status: 'error',
-        error: error instanceof Error ? error.message : 'Neznámá chyba'
-      }));
-      onError?.(error instanceof Error ? error.message : 'Neznámá chyba');
+      onError?.('Chyba při přístupu k mikrofonu');
     }
   };
 
   const endCall = (): void => {
-    try {
-      // Zastavení nahrávání
-      stopRecording();
-      
-      // Uzavření WebSocket
-      if (websocket.current) {
-        websocket.current.close();
-        websocket.current = null;
-      }
-      
-      // Uzavření AudioContext
-      if (audioContext.current) {
-        audioContext.current.close();
-        audioContext.current = null;
-      }
-      
-      setIsConnected(false);
-      setCallState(prev => ({
-        ...prev,
-        status: 'idle',
-        duration: 0
-      }));
-      
-      if (callId.current) {
-        onCallEnd?.(callId.current);
-      }
-      
-      setIsMuted(false);
-      
-    } catch (error) {
-      console.error('[SimpleWebRTC] Chyba při ukončování hovoru:', error);
+    console.log('[SimpleWebRTC] Ukončujem hovor...');
+    
+    // Zastavení audio processing
+    if (processor.current) {
+      processor.current.disconnect();
+      processor.current = null;
     }
+
+    // Zastavení media stream
+    if (mediaStream.current) {
+      mediaStream.current.getTracks().forEach(track => track.stop());
+      mediaStream.current = null;
+    }
+
+    // Uzavření AudioContext
+    if (audioContext.current) {
+      audioContext.current.close();
+      audioContext.current = null;
+    }
+
+    // Uzavření WebSocket
+    if (websocket.current) {
+      websocket.current.close();
+      websocket.current = null;
+    }
+
+    setIsConnected(false);
+    setCallState({
+      status: 'idle',
+      duration: 0
+    });
+
+    onCallEnd?.(callId.current);
   };
 
   const toggleMute = (): void => {
-    if (mediaRecorder.current) {
-      if (isMuted) {
-        mediaRecorder.current.resume();
-      } else {
-        mediaRecorder.current.pause();
-      }
-      setIsMuted(!isMuted);
-    }
+    setIsMuted(!isMuted);
+    console.log('[SimpleWebRTC] Mute:', !isMuted);
+  };
+
+  const formatDuration = (seconds: number): string => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   };
 
   const getStatusColor = (): string => {
@@ -314,7 +328,8 @@ const SimpleWebRTCPhone: React.FC<SimpleWebRTCPhoneProps> = ({
       case 'connected': return 'success';
       case 'connecting': return 'warning';
       case 'error': return 'danger';
-      default: return 'secondary';
+      case 'disconnected': return 'secondary';
+      default: return 'primary';
     }
   };
 
@@ -322,7 +337,7 @@ const SimpleWebRTCPhone: React.FC<SimpleWebRTCPhoneProps> = ({
     switch (callState.status) {
       case 'idle': return 'Připraven';
       case 'connecting': return 'Připojuji...';
-      case 'connected': return `Připojen (${formatDuration(callState.duration)})`;
+      case 'connected': return 'Připojen';
       case 'disconnected': return 'Odpojeno';
       case 'error': return 'Chyba';
       default: return 'Neznámý stav';
@@ -330,74 +345,107 @@ const SimpleWebRTCPhone: React.FC<SimpleWebRTCPhoneProps> = ({
   };
 
   return (
-    <Card className="simple-webrtc-phone">
-      <Card.Header>
-        <div className="d-flex justify-content-between align-items-center">
-          <h5 className="mb-0">AI Asistent (WebRTC)</h5>
-          <Badge bg={getStatusColor()}>{getStatusText()}</Badge>
-        </div>
-      </Card.Header>
+    <div className="simple-webrtc-phone">
+      <Card className="shadow-lg border-0">
+        <Card.Header className="bg-gradient-primary text-white">
+          <div className="d-flex justify-content-between align-items-center">
+            <h5 className="mb-0">
+              <Phone className="me-2" size={20} />
+              AI Asistent - Telefon
+            </h5>
+            <Badge bg={getStatusColor()}>
+              {getStatusText()}
+            </Badge>
+          </div>
+        </Card.Header>
 
-      <Card.Body>
-        {callState.error && (
-          <Alert variant="danger" className="mb-3">
-            {callState.error}
-          </Alert>
-        )}
-
-        <div className="text-center mb-3">
-          {callState.status === 'idle' && (
-            <Button
-              variant="success"
-              size="lg"
-              onClick={startCall}
-              className="rounded-circle p-3"
-            >
-              <Phone size={24} />
-            </Button>
+        <Card.Body className="text-center p-4">
+          {callState.status === 'error' && callState.error && (
+            <Alert variant="danger" className="mb-3">
+              <strong>Chyba:</strong> {callState.error}
+            </Alert>
           )}
 
-          {(callState.status === 'connecting' || callState.status === 'connected') && (
-            <div className="d-flex justify-content-center gap-3">
-              <Button
-                variant={isMuted ? 'warning' : 'secondary'}
-                onClick={toggleMute}
-                className="rounded-circle p-3"
-                disabled={callState.status !== 'connected'}
-              >
-                {isMuted ? <MicOff size={20} /> : <Mic size={20} />}
-              </Button>
-
-              <Button
-                variant="danger"
-                size="lg"
-                onClick={endCall}
-                className="rounded-circle p-3"
-              >
-                <PhoneOff size={24} />
-              </Button>
+          {callState.status === 'connected' && (
+            <div className="mb-3">
+              <div className="display-6 text-primary fw-bold">
+                {formatDuration(callState.duration)}
+              </div>
+              <small className="text-muted">Délka hovoru</small>
             </div>
           )}
-        </div>
 
-        <div className="text-center text-muted">
-          <small>
-            {callState.status === 'idle' && 'Klikněte pro zahájení hovoru s AI asistentem'}
-            {callState.status === 'connecting' && 'Připojuji k AI asistentovi...'}
-            {callState.status === 'connected' && 'Hovor s AI asistentem aktivní - můžete mluvit'}
-            {callState.status === 'disconnected' && 'Hovor byl ukončen'}
-          </small>
-        </div>
+          {callState.status === 'connecting' && (
+            <div className="mb-3">
+              <div className="spinner-border text-primary" role="status">
+                <span className="visually-hidden">Připojuji...</span>
+              </div>
+              <div className="mt-2 text-muted">Navazuji spojení s AI asistentem...</div>
+            </div>
+          )}
 
-        {isConnected && (
-          <div className="mt-3">
-            <small className="text-success">
-              ✓ Připojeno k OpenAI Realtime API
-            </small>
+          <div className="d-flex justify-content-center gap-3">
+            {callState.status === 'idle' || callState.status === 'error' || callState.status === 'disconnected' ? (
+              <Button
+                variant="success"
+                size="lg"
+                className="rounded-circle p-3"
+                onClick={startCall}
+                style={{ width: '80px', height: '80px' }}
+              >
+                <Phone size={32} />
+              </Button>
+            ) : (
+              <>
+                <Button
+                  variant="danger"
+                  size="lg"
+                  className="rounded-circle p-3"
+                  onClick={endCall}
+                  style={{ width: '80px', height: '80px' }}
+                >
+                  <PhoneOff size={32} />
+                </Button>
+
+                <Button
+                  variant={isMuted ? 'warning' : 'secondary'}
+                  size="lg"
+                  className="rounded-circle p-3"
+                  onClick={toggleMute}
+                  style={{ width: '60px', height: '60px' }}
+                >
+                  {isMuted ? <MicOff size={24} /> : <Mic size={24} />}
+                </Button>
+              </>
+            )}
           </div>
-        )}
-      </Card.Body>
-    </Card>
+
+          {callState.status === 'connected' && (
+            <div className="mt-3">
+              <small className="text-muted d-block">
+                {isConnected ? (
+                  <span className="text-success">
+                    <span className="badge bg-success rounded-pill me-1">●</span>
+                    Připojen k AI asistentovi
+                  </span>
+                ) : (
+                  <span className="text-warning">
+                    <span className="badge bg-warning rounded-pill me-1">●</span>
+                    Připojuji...
+                  </span>
+                )}
+              </small>
+              {isMuted && (
+                <small className="text-warning d-block mt-1">
+                  <MicOff size={14} className="me-1" />
+                  Mikrofon ztlumen
+                </small>
+              )}
+            </div>
+          )}
+        </Card.Body>
+      </Card>
+    </div>
   );
 };
 

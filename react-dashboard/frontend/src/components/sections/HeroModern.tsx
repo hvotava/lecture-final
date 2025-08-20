@@ -31,7 +31,7 @@ export const HeroModern: React.FC = () => {
       transition: {
         duration: 3,
         repeat: Infinity,
-        ease: "easeInOut"
+        ease: "easeInOut" as const as const
       }
     }
   };
@@ -42,7 +42,7 @@ export const HeroModern: React.FC = () => {
       transition: {
         duration: 2,
         repeat: Infinity,
-        ease: "easeInOut"
+        ease: "easeInOut" as const as const
       }
     }
   };

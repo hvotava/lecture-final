@@ -105,7 +105,7 @@ export const ProjectIntro: React.FC = () => {
               {/* Floating Elements */}
               <motion.div
                 animate={{ y: [0, -10, 0] }}
-                transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
+                transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" as const }}
                 className="absolute top-6 right-6 bg-white/90 backdrop-blur-sm rounded-lg p-3 shadow-lg"
               >
                 <div className="flex items-center gap-2">
@@ -116,7 +116,7 @@ export const ProjectIntro: React.FC = () => {
 
               <motion.div
                 animate={{ y: [0, 10, 0] }}
-                transition={{ duration: 4, repeat: Infinity, ease: "easeInOut", delay: 1 }}
+                transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" as const, delay: 1 }}
                 className="absolute bottom-6 left-6 bg-white/90 backdrop-blur-sm rounded-lg p-3 shadow-lg"
               >
                 <div className="flex items-center gap-2">

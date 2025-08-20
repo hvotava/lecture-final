@@ -53,7 +53,7 @@ export const HeroGlassmorphism: React.FC = () => {
       transition: {
         duration: 4,
         repeat: Infinity,
-        ease: "easeInOut"
+        ease: "easeInOut" as const as const
       }
     }
   };
@@ -74,7 +74,7 @@ export const HeroGlassmorphism: React.FC = () => {
           transition={{
             duration: 8,
             repeat: Infinity,
-            ease: "easeInOut"
+            ease: "easeInOut" as const
           }}
           className="absolute top-20 left-20 w-96 h-96 bg-gradient-to-r from-pink-400 to-purple-600 rounded-full blur-3xl"
         />
@@ -86,7 +86,7 @@ export const HeroGlassmorphism: React.FC = () => {
           transition={{
             duration: 10,
             repeat: Infinity,
-            ease: "easeInOut",
+            ease: "easeInOut" as const,
             delay: 2
           }}
           className="absolute top-40 right-20 w-80 h-80 bg-gradient-to-r from-cyan-400 to-blue-600 rounded-full blur-3xl"
@@ -99,7 +99,7 @@ export const HeroGlassmorphism: React.FC = () => {
           transition={{
             duration: 12,
             repeat: Infinity,
-            ease: "easeInOut",
+            ease: "easeInOut" as const,
             delay: 4
           }}
           className="absolute bottom-20 left-1/2 w-72 h-72 bg-gradient-to-r from-orange-400 to-pink-600 rounded-full blur-3xl"
@@ -250,7 +250,7 @@ export const HeroGlassmorphism: React.FC = () => {
                   transition={{ 
                     duration: 8, 
                     repeat: Infinity, 
-                    ease: "easeInOut" 
+                    ease: "easeInOut" as const 
                   }}
                   className="relative w-96 h-96 mx-auto"
                 >
@@ -270,7 +270,7 @@ export const HeroGlassmorphism: React.FC = () => {
                         transition={{ 
                           duration: 10, 
                           repeat: Infinity, 
-                          ease: "linear" 
+                          ease: "linear" as const 
                         }}
                         className="relative"
                       >
@@ -294,7 +294,7 @@ export const HeroGlassmorphism: React.FC = () => {
                               duration: 2,
                               repeat: Infinity,
                               delay: i * 0.2,
-                              ease: "easeInOut"
+                              ease: "easeInOut" as const
                             }}
                             className="w-8 h-8 bg-gradient-to-r from-pink-400 to-purple-400 rounded-lg opacity-60"
                           />

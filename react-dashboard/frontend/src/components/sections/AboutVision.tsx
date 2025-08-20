@@ -33,7 +33,7 @@ export const AboutVision: React.FC = () => {
                 {/* Floating Badge */}
                 <motion.div
                   animate={{ scale: [1, 1.05, 1] }}
-                  transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
+                  transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" as const }}
                   className="absolute bottom-6 right-6 bg-white/95 backdrop-blur-sm rounded-lg p-3 shadow-lg"
                 >
                   <div className="flex items-center gap-2">

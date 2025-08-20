@@ -221,7 +221,7 @@ function App() {
             />
             
             <Route
-              path="/analytics"
+              path="/dashboard/analytics"
               element={
                 <ProtectedRoute adminOnly>
                   <ResponsiveSidebar>
@@ -232,18 +232,7 @@ function App() {
             />
             
             <Route
-              path="/placement-test"
-              element={
-                <ProtectedRoute>
-                  <ResponsiveSidebar>
-                    <PlacementTest />
-                  </ResponsiveSidebar>
-                </ProtectedRoute>
-              }
-            />
-            
-            <Route
-              path="/content-management"
+              path="/dashboard/content-management"
               element={
                 <ProtectedRoute adminOnly>
                   <ResponsiveSidebar>
@@ -254,7 +243,7 @@ function App() {
             />
             
             <Route
-              path="/progress-analytics"
+              path="/dashboard/progress-analytics"
               element={
                 <ProtectedRoute adminOnly>
                   <ResponsiveSidebar>
@@ -265,7 +254,7 @@ function App() {
             />
 
             <Route
-              path="/user-progress"
+              path="/dashboard/user-progress"
               element={
                 <ProtectedRoute adminOnly>
                   <ResponsiveSidebar>
@@ -276,11 +265,22 @@ function App() {
             />
 
             <Route
-              path="/question-manager"
+              path="/dashboard/question-manager"
               element={
                 <ProtectedRoute adminOnly>
                   <ResponsiveSidebar>
                     <QuestionManager />
+                  </ResponsiveSidebar>
+                </ProtectedRoute>
+              }
+            />
+            
+            <Route
+              path="/dashboard/placement-test"
+              element={
+                <ProtectedRoute>
+                  <ResponsiveSidebar>
+                    <PlacementTest />
                   </ResponsiveSidebar>
                 </ProtectedRoute>
               }

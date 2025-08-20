@@ -71,6 +71,31 @@ const ChevronRightIcon = ({ className = "w-4 h-4" }) => (
   </svg>
 );
 
+const ContentIcon = ({ className = "w-5 h-5" }) => (
+  <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+  </svg>
+);
+
+const AnalyticsIcon = ({ className = "w-5 h-5" }) => (
+  <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+  </svg>
+);
+
+const QuestionIcon = ({ className = "w-5 h-5" }) => (
+  <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+  </svg>
+);
+
+const UserProgressIcon = ({ className = "w-5 h-5" }) => (
+  <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+  </svg>
+);
+
 interface ResponsiveSidebarProps {
   children: React.ReactNode;
 }
@@ -93,6 +118,10 @@ const ResponsiveSidebar: React.FC<ResponsiveSidebarProps> = ({ children }) => {
     { path: '/dashboard/trainings', label: 'Školení', icon: TrainingsIcon },
     { path: '/dashboard/lessons', label: 'Lekce', icon: LessonsIcon },
     { path: '/dashboard/tests', label: 'Testy', icon: TestsIcon },
+    { path: '/dashboard/content-management', label: 'Správa obsahu', icon: ContentIcon },
+    { path: '/dashboard/analytics', label: 'Analytika', icon: AnalyticsIcon },
+    { path: '/dashboard/question-manager', label: 'Správa otázek', icon: QuestionIcon },
+    { path: '/dashboard/user-progress', label: 'Pokrok uživatelů', icon: UserProgressIcon },
     { path: '/dashboard/phone', label: 'Telefon', icon: PhoneIcon },
   ];
 

@@ -17,6 +17,9 @@ router.post('/login', [
     }
 
     const { email, password } = req.body;
+    
+    // DEBUG: Log přihlašovacích údajů
+    console.log('🔍 LOGIN ATTEMPT:', { email, password: password ? '***' : 'MISSING' });
 
     // Najdi uživatele
     const user = await User.findOne({ 
@@ -25,12 +28,18 @@ router.post('/login', [
     });
 
     if (!user) {
+      console.log('❌ USER NOT FOUND for email:', email);
       return res.status(401).json({ error: 'Invalid email or password' });
     }
+    
+    console.log('✅ USER FOUND:', { id: user.id, name: user.name, email: user.email, role: user.role });
 
     // Ověř heslo
     const isValidPassword = await bcrypt.compare(password, user.password);
+    console.log('🔑 PASSWORD CHECK:', { isValid: isValidPassword });
+    
     if (!isValidPassword) {
+      console.log('❌ INVALID PASSWORD for user:', email);
       return res.status(401).json({ error: 'Invalid email or password' });
     }
 

@@ -4,6 +4,9 @@ import { motion } from 'framer-motion';
 import { UserPlus, Mail, Lock, Eye, EyeOff, ArrowLeft, User } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 
+// Import YPO theme CSS
+import '../ui/ypo-theme.css';
+
 const RegisterPage: React.FC = () => {
   const [formData, setFormData] = useState({
     name: '',

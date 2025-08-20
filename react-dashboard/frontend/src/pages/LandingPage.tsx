@@ -11,9 +11,9 @@ import { References } from '../components/sections/References';
 const LandingPage: React.FC = () => {
   return (
     <div className="min-h-screen bg-surface">
-      {/* Import theme CSS */}
+      {/* Import YPO theme CSS */}
       <style>
-        {`@import url('./ui/theme.css');`}
+        {`@import url('./ui/ypo-theme.css');`}
       </style>
       
       {/* Header - sticky with transparency effect */}

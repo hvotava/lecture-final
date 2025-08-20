@@ -4,6 +4,9 @@ import { motion } from 'framer-motion';
 import { Lock, Mail, Eye, EyeOff, ArrowLeft } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 
+// Import YPO theme CSS
+import '../ui/ypo-theme.css';
+
 const Login: React.FC = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');

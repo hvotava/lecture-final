@@ -1,2 +1,10 @@
-# Ignore everything for Docker builds
-* 
+# Docker ignore - allow react-dashboard but ignore unnecessary files
+node_modules/
+.git/
+.cache/
+*.log
+.env*
+.DS_Store
+coverage/
+*.md
+!README.md 

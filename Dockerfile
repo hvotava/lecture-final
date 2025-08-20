@@ -7,8 +7,8 @@ WORKDIR /app
 # Copy all source code first
 COPY . .
 
-# Install root dependencies
-RUN npm ci --only=production --no-audit --no-fund
+# Install backend dependencies
+RUN cd react-dashboard/backend && npm ci --only=production --no-audit --no-fund
 
 # Install frontend dependencies and build
 RUN cd react-dashboard/frontend && npm ci && npm run build

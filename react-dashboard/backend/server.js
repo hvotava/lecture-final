@@ -82,8 +82,8 @@ app.get('/api/health', (req, res) => {
 // Import routes
 const authRoutes = require('./routes/auth');
 const userRoutes = require('./routes/users');
-const twilioRoutes = require('./routes/twilio');
-const webrtcRoutes = require('./routes/webrtc');
+// const twilioRoutes = require('./routes/twilio'); // DELETED - using webrtc-enhanced
+const webrtcRoutes = require('./routes/webrtc-enhanced');
 // WebSocket handler - using Express-WS instead of custom handler
 // const { setupTwilioWebSocket } = require('./websocket/twilioStream');
 
@@ -97,17 +97,16 @@ app.use('/api/lessons', require('./routes/lessons'));
 app.use('/api/tests', require('./routes/tests'));
 app.use('/api/lesson-sessions', require('./routes/lesson-sessions'));
 app.use('/api/dashboard', require('./routes/dashboard'));
-app.use('/api/twilio', twilioRoutes);
+// app.use('/api/twilio', twilioRoutes); // DELETED - using webrtc-enhanced
 app.use('/api/webrtc', webrtcRoutes);
 // ENABLED: WebRTC signaling for browser clients
-app.use('/api/twilio/webrtc', require('./routes/twilio-webrtc').router);
+// app.use('/api/twilio/webrtc', require('./routes/twilio-webrtc').router); // DELETED
 
 // DEBUG: Log registered routes
 console.log('🛣️ REGISTERED ROUTES:');
-console.log('   - /api/webrtc/* (including /api/webrtc/stream)');
-console.log('   - /api/twilio/webrtc/* (including /api/twilio/webrtc/signaling)');
-console.log('   - WebRTC routes loaded from:', require.resolve('./routes/webrtc'));
-console.log('   - Twilio WebRTC routes loaded from:', require.resolve('./routes/twilio-webrtc'));
+console.log('   - /api/webrtc/* (Enhanced AI Tutor + Barge-in)');
+console.log('   - WebRTC routes loaded from:', require.resolve('./routes/webrtc-enhanced'));
+// console.log('   - Twilio WebRTC routes loaded from:', require.resolve('./routes/twilio-webrtc')); // DELETED
 console.log('🛣️ Routes registration complete');
 app.use('/api/content', require('./routes/content'));
 app.use('/api/ai-proxy', require('./routes/ai-proxy'));

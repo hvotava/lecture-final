@@ -1,9 +1,11 @@
-# RAILPACK CACHE FIX: Prevent all cache issues
-# This prevents RAILPACK from trying to cache non-existent folders
+# RAILPACK CACHE FIX: Prevent ALL cache issues
+# This prevents RAILPACK from trying to cache any problematic folders
 
-# Force exclude ALL problematic directories
+# Force exclude ALL problematic directories with aggressive patterns
 **/node_modules/
 **/node_modules/**
+**/node_modules/**/**
+**/node_modules/**/**/**
 **/build/
 **/dist/
 **/.cache/
@@ -17,19 +19,27 @@
 **/.nyc_output/
 **/junit.xml
 
-# Node.js specific exclusions
+# Node.js specific exclusions - ALL variations
 node_modules/
+**/node_modules/
+**/node_modules/**
+**/node_modules/**/**
+**/node_modules/**/**/**
 .npm/
 .yarn/
 .cache/
 
-# Build artifacts
+# Build artifacts - ALL variations
 build/
 dist/
 .next/
 .nuxt/
 target/
 out/
+**/build/
+**/dist/
+**/build/**/**
+**/dist/**/**
 
 # Environment and config
 .env*
@@ -59,4 +69,17 @@ yarn-error.log*
 
 # Docker (force RAILPACK)
 Dockerfile*
-.dockerignore 
+.dockerignore
+
+# Additional aggressive exclusions
+**/coverage/
+**/test-results/
+**/playwright-report/
+**/.nyc_output/
+**/junit.xml
+**/node_modules/**/**
+**/build/**/**
+**/dist/**/**
+**/node_modules/**/**/**
+**/build/**/**/**
+**/dist/**/**/** 

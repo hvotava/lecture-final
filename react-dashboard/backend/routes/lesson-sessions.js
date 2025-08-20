@@ -1,52 +1,64 @@
 const express = require('express');
-const { LessonSession, TestResult, User, Lesson } = require('../models');
 const { auth, adminOnly } = require('../middleware/auth');
+const { LessonSession, User, Lesson } = require('../models');
+const { Op } = require('sequelize');
+
 const router = express.Router();
 
-// GET všechny lesson sessions (admin only)
+// GET /api/lesson-sessions - Get all lesson sessions
 router.get('/', auth, adminOnly, async (req, res) => {
   try {
-    const page = parseInt(req.query.page) || 1;
-    const limit = parseInt(req.query.limit) || 10;
+    const { page = 1, limit = 10, search = '', userId, lessonId } = req.query;
     const offset = (page - 1) * limit;
-    const search = req.query.search || '';
 
-    const whereClause = search ? {
-      lessonTitle: { [require('sequelize').Op.iLike]: `%${search}%` }
-    } : {};
+    const whereConditions = {};
+    
+    if (search) {
+      whereConditions[Op.or] = [
+        { sessionId: { [Op.iLike]: `%${search}%` } },
+        { phase: { [Op.iLike]: `%${search}%` } }
+      ];
+    }
 
-    const { count, rows } = await LessonSession.findAndCountAll({
-      where: whereClause,
-      limit,
-      offset,
-      order: [['startedAt', 'DESC']],
+    if (userId) {
+      whereConditions.userId = userId;
+    }
+
+    if (lessonId) {
+      whereConditions.lessonId = lessonId;
+    }
+
+    const sessions = await LessonSession.findAndCountAll({
+      where: whereConditions,
       include: [
         {
           model: User,
-          attributes: ['id', 'name', 'email'],
-          required: false
+          attributes: ['id', 'name', 'email']
         },
         {
           model: Lesson,
-          attributes: ['id', 'title', 'description'],
-          required: false
+          attributes: ['id', 'title', 'description']
         }
-      ]
+      ],
+      order: [['createdAt', 'DESC']],
+      limit: parseInt(limit),
+      offset: parseInt(offset)
     });
 
     res.json({
-      sessions: rows,
-      totalSessions: count,
-      totalPages: Math.ceil(count / limit),
-      currentPage: page
+      sessions: sessions.rows,
+      total: sessions.count,
+      page: parseInt(page),
+      limit: parseInt(limit),
+      totalPages: Math.ceil(sessions.count / limit)
     });
   } catch (error) {
-    console.error('Get lesson sessions error:', error);
+    console.error('Error fetching lesson sessions:', error);
     res.status(500).json({ error: 'Failed to fetch lesson sessions' });
   }
 });
 
-// GET session detail (admin only)
+// GET /api/lesson-sessions/:id - Get specific lesson session
 router.get('/:id', auth, adminOnly, async (req, res) => {
   try {
     const session = await LessonSession.findByPk(req.params.id, {
@@ -66,153 +78,118 @@ router.get('/:id', auth, adminOnly, async (req, res) => {
       return res.status(404).json({ error: 'Lesson session not found' });
     }
 
-    // Get related test results
-    const testResults = await TestResult.findAll({
-      where: {
-        userId: session.userId,
-        testName: { [require('sequelize').Op.iLike]: `%${session.lessonTitle}%` }
-      },
-      order: [['completed_at', 'DESC']]
-    });
-
-    res.json({
-      session,
-      testResults
-    });
+    res.json(session);
   } catch (error) {
-    console.error('Get lesson session detail error:', error);
-    res.status(500).json({ error: 'Failed to fetch lesson session detail' });
+    console.error('Error fetching lesson session:', error);
+    res.status(500).json({ error: 'Failed to fetch lesson session' });
   }
 });
 
-// GET user's lesson sessions
+// GET /api/lesson-sessions/user/:userId - Get sessions for specific user
 router.get('/user/:userId', auth, async (req, res) => {
   try {
-    const userId = req.params.userId;
-    
-    // Check if user can access these sessions
-    if (req.user.id !== parseInt(userId) && req.user.role !== 'admin' && req.user.role !== 'superuser') {
+    const { userId } = req.params;
+    const { page = 1, limit = 10 } = req.query;
+    const offset = (page - 1) * limit;
+
+    // Check if user can access this data (admin or own data)
+    const isAdmin = req.user.role === 'admin';
+    const isOwnData = req.user.id === parseInt(userId);
+
+    if (!isAdmin && !isOwnData) {
       return res.status(403).json({ error: 'Access denied' });
     }
 
-    const sessions = await LessonSession.findAll({
-      where: { userId },
-      order: [['startedAt', 'DESC']],
+    const sessions = await LessonSession.findAndCountAll({
+      where: { userId: userId },
       include: [
         {
           model: Lesson,
           attributes: ['id', 'title', 'description']
         }
-      ]
+      ],
+      order: [['createdAt', 'DESC']],
+      limit: parseInt(limit),
+      offset: parseInt(offset)
     });
-
-    // Get test results for this user
-    const testResults = await TestResult.findAll({
-      where: { userId },
-      order: [['completed_at', 'DESC']]
-    });
-
-    // Calculate statistics
-    const stats = {
-      totalSessions: sessions.length,
-      completedSessions: sessions.filter(s => s.status === 'completed').length,
-      averageScore: testResults.length > 0 ? 
-        testResults.reduce((sum, r) => sum + r.percentage, 0) / testResults.length : 0,
-      totalTestsCompleted: testResults.length
-    };
 
     res.json({
-      sessions,
-      testResults,
-      stats
+      sessions: sessions.rows,
+      total: sessions.count,
+      page: parseInt(page),
+      limit: parseInt(limit),
+      totalPages: Math.ceil(sessions.count / limit)
     });
   } catch (error) {
-    console.error('Get user lesson sessions error:', error);
-    res.status(500).json({ error: 'Failed to fetch user lesson sessions' });
+    console.error('Error fetching user lesson sessions:', error);
+    res.status(500).json({ error: 'Failed to fetch lesson sessions' });
   }
 });
 
-// GET lesson session statistics (admin only)
+// GET /api/lesson-sessions/stats/overview - Get overview statistics
 router.get('/stats/overview', auth, adminOnly, async (req, res) => {
   try {
     const totalSessions = await LessonSession.count();
-    const completedSessions = await LessonSession.count({ where: { status: 'completed' } });
-    const activeSessions = await LessonSession.count({ 
-      where: { status: ['started', 'in_progress', 'testing'] }
+    
+    const completedSessions = await LessonSession.count({
+      where: { phase: 'completed' }
     });
 
-    const avgDuration = await LessonSession.findAll({
+    const activeSessions = await LessonSession.count({
+      where: { phase: { [Op.in]: ['introduction', 'content', 'test'] } }
+    });
+
+    const avgDuration = await LessonSession.findOne({
       attributes: [
-        [require('sequelize').fn('AVG', require('sequelize').col('duration')), 'avgDuration']
+        [sequelize.fn('AVG', sequelize.col('duration')), 'avgDuration']
       ],
-      where: { status: 'completed' },
-      raw: true
+      where: { 
+        duration: { [Op.not]: null },
+        phase: 'completed'
+      }
     });
 
-    const testResults = await TestResult.findAll({
-      attributes: [
-        [require('sequelize').fn('AVG', require('sequelize').col('percentage')), 'avgScore'],
-        [require('sequelize').fn('COUNT', require('sequelize').col('id')), 'totalTests']
-      ],
-      raw: true
-    });
-
-    // Popular lessons
-    const popularLessons = await LessonSession.findAll({
-      attributes: [
-        'lessonTitle',
-        [require('sequelize').fn('COUNT', require('sequelize').col('id')), 'sessionCount']
-      ],
-      group: ['lessonTitle'],
-      order: [[require('sequelize').fn('COUNT', require('sequelize').col('id')), 'DESC']],
-      limit: 5,
-      raw: true
-    });
-
-    // Recent activity
     const recentSessions = await LessonSession.findAll({
-      limit: 10,
-      order: [['startedAt', 'DESC']],
       include: [
         {
           model: User,
-          attributes: ['name']
+          attributes: ['id', 'name', 'email']
+        },
+        {
+          model: Lesson,
+          attributes: ['id', 'title']
         }
-      ]
+      ],
+      order: [['createdAt', 'DESC']],
+      limit: 5
     });
 
     res.json({
-      overview: {
-        totalSessions,
-        completedSessions,
-        activeSessions,
-        completionRate: totalSessions > 0 ? Math.round((completedSessions / totalSessions) * 100) : 0,
-        averageDuration: avgDuration[0]?.avgDuration ? Math.round(avgDuration[0].avgDuration / 60) : 0, // minutes
-        averageScore: testResults[0]?.avgScore ? Math.round(testResults[0].avgScore) : 0,
-        totalTests: testResults[0]?.totalTests || 0
-      },
-      popularLessons,
+      totalSessions,
+      completedSessions,
+      activeSessions,
+      averageDuration: avgDuration?.dataValues?.avgDuration || 0,
       recentSessions
     });
   } catch (error) {
-    console.error('Get lesson session stats error:', error);
-    res.status(500).json({ error: 'Failed to fetch lesson session statistics' });
+    console.error('Error fetching lesson session stats:', error);
+    res.status(500).json({ error: 'Failed to fetch statistics' });
   }
 });
 
-// DELETE lesson session (admin only)
+// DELETE /api/lesson-sessions/:id - Delete lesson session
 router.delete('/:id', auth, adminOnly, async (req, res) => {
   try {
     const session = await LessonSession.findByPk(req.params.id);
+    
     if (!session) {
       return res.status(404).json({ error: 'Lesson session not found' });
     }
 
     await session.destroy();
-    
     res.json({ message: 'Lesson session deleted successfully' });
   } catch (error) {
-    console.error('Delete lesson session error:', error);
+    console.error('Error deleting lesson session:', error);
     res.status(500).json({ error: 'Failed to delete lesson session' });
   }
 });

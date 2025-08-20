@@ -11,6 +11,7 @@ const expressWs = require('express-ws')(router);
 
 // OpenAI configuration
 const VOICE = 'alloy';
+const OPENAI_MODEL = 'gpt-4o-realtime-preview-2024-12-17'; // Updated model
 const SYSTEM_MESSAGE = `Jsi AI lektor pro firemní školení. Tvým úkolem je vést uživatele kompletní lekcí od začátku až do konce.
 
 TVOJE ROLE:
@@ -35,7 +36,62 @@ PRAVIDLA:
 - Vždy uložíš výsledky do databáze
 - Motivuj uživatele a chval pokrok
 
-Začni uvítáním a automaticky spusť přiřazenou lekci uživatele.`;
+---
+# DATA LEKCE
+Následují data pro lekci, která budou použita pro celou interakci. Zpracuj je a drž se jejich struktury pro doručování obsahu uživateli.
+
+Název lekce: {{lesson_title}}
+Délka lekce: {{lesson_duration}}
+Popis lekce: {{lesson_description}}
+
+Obsah lekce (rozdělen do segmentů):
+{{lesson_content_segments}}
+
+Test (otázky s možnostmi):
+{{test_questions}}
+
+---
+
+Začni uvítáním, automaticky spusť přiřazenou lekci a postupuj podle jejích segmentů a testových otázek. Nečekej na žádné další instrukce, celý obsah lekce máš k dispozici v této zprávě.`;
+
+// Function to generate dynamic system message with lesson data
+async function generateDynamicSystemMessage(lessonData, testData) {
+  if (!lessonData) {
+    return SYSTEM_MESSAGE.replace(/---[\s\S]*?---/g, '').trim();
+  }
+
+  let dynamicMessage = SYSTEM_MESSAGE;
+  
+  // Replace lesson placeholders
+  dynamicMessage = dynamicMessage.replace('{{lesson_title}}', lessonData.title || 'Nespecifikovaná lekce');
+  dynamicMessage = dynamicMessage.replace('{{lesson_duration}}', lessonData.duration || '30 minut');
+  dynamicMessage = dynamicMessage.replace('{{lesson_description}}', lessonData.description || 'Popis lekce není dostupný');
+  
+  // Format lesson content segments
+  const contentSegments = lessonData.content ? 
+    lessonData.content.split('\n\n').map((segment, index) => 
+      `Segment ${index + 1}: ${segment}`
+    ).join('\n\n') : 'Obsah lekce není dostupný';
+  
+  dynamicMessage = dynamicMessage.replace('{{lesson_content_segments}}', contentSegments);
+  
+  // Format test questions
+  let testQuestions = 'Test otázky nejsou dostupné';
+  if (testData && testData.questions) {
+    try {
+      const questions = JSON.parse(testData.questions);
+      testQuestions = questions.map((q, index) => 
+        `Otázka ${index + 1}: ${q.question}\nMožnosti: ${q.options.join(', ')}\nSprávná odpověď: ${q.correct_answer}`
+      ).join('\n\n');
+    } catch (error) {
+      console.error('Error parsing test questions:', error);
+    }
+  }
+  
+  dynamicMessage = dynamicMessage.replace('{{test_questions}}', testQuestions);
+  
+  return dynamicMessage;
+}
 
 // Logging configuration
 const LOG_EVENT_TYPES = [
@@ -123,7 +179,7 @@ router.ws('/stream', async (ws, req) => {
   console.log(`🔗 [${sessionId}] Connecting to OpenAI Realtime API with barge-in...`);
   
   const openAiWs = new WebSocket(
-    'wss://api.openai.com/v1/realtime?model=gpt-4o-realtime-preview-2024-10-01',
+    `wss://api.openai.com/v1/realtime?model=${OPENAI_MODEL}`,
     {
       headers: {
         Authorization: `Bearer ${openaiApiKey}`,
@@ -133,7 +189,28 @@ router.ws('/stream', async (ws, req) => {
   );
   
   // Function to send session configuration to OpenAI
-  const sendSessionUpdate = () => {
+  const sendSessionUpdate = async () => {
+    // Get dynamic system message with lesson data
+    let instructions = SYSTEM_MESSAGE;
+    
+    if (tutorSession && tutorSession.lesson) {
+      try {
+        // Find associated test for this lesson
+        const { Test } = require('../models');
+        const testData = await Test.findOne({
+          where: { 
+            lesson_id: tutorSession.lesson.id,
+            lesson_number: tutorSession.lesson.lesson_number 
+          }
+        });
+        
+        instructions = await generateDynamicSystemMessage(tutorSession.lesson, testData);
+        console.log(`📚 [${sessionId}] Generated dynamic instructions for lesson: ${tutorSession.lesson.title}`);
+      } catch (error) {
+        console.error(`❌ [${sessionId}] Error generating dynamic instructions:`, error);
+      }
+    }
+    
     const sessionUpdate = {
       type: 'session.update',
       session: {
@@ -141,14 +218,14 @@ router.ws('/stream', async (ws, req) => {
           type: 'server_vad',
           threshold: 0.5,
           prefix_padding_ms: 300,
-          silence_duration_ms: 500
+          silence_duration_ms: 800
         },
         input_audio_format: 'g711_ulaw',
         output_audio_format: 'g711_ulaw',
         voice: VOICE,
-        instructions: SYSTEM_MESSAGE,
+        instructions: instructions,
         modalities: ["text", "audio"],
-        temperature: 0.8,
+        temperature: 0.7,
         input_audio_transcription: {
           model: 'whisper-1'
         }

@@ -155,7 +155,7 @@ function App() {
             />
             
             <Route
-              path="/users"
+              path="/dashboard/users"
               element={
                 <ProtectedRoute adminOnly>
                   <ResponsiveSidebar>
@@ -166,7 +166,7 @@ function App() {
             />
             
             <Route
-              path="/user-management"
+              path="/dashboard/user-management"
               element={
                 <ProtectedRoute adminOnly>
                   <ResponsiveSidebar>
@@ -177,7 +177,7 @@ function App() {
             />
             
             <Route
-              path="/companies"
+              path="/dashboard/companies"
               element={
                 <ProtectedRoute adminOnly>
                   <ResponsiveSidebar>
@@ -188,7 +188,7 @@ function App() {
             />
             
             <Route
-              path="/trainings"
+              path="/dashboard/trainings"
               element={
                 <ProtectedRoute>
                   <ResponsiveSidebar>
@@ -199,7 +199,7 @@ function App() {
             />
             
             <Route
-              path="/lessons"
+              path="/dashboard/lessons"
               element={
                 <ProtectedRoute>
                   <ResponsiveSidebar>
@@ -210,7 +210,7 @@ function App() {
             />
             
             <Route
-              path="/tests"
+              path="/dashboard/tests"
               element={
                 <ProtectedRoute>
                   <ResponsiveSidebar>
@@ -303,6 +303,17 @@ function App() {
                 <ProtectedRoute>
                   <ResponsiveSidebar>
                     <TestResults />
+                  </ResponsiveSidebar>
+                </ProtectedRoute>
+              }
+            />
+            
+            <Route
+              path="/dashboard/phone"
+              element={
+                <ProtectedRoute>
+                  <ResponsiveSidebar>
+                    <WebRTCDemo />
                   </ResponsiveSidebar>
                 </ProtectedRoute>
               }

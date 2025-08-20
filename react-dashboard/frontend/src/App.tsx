@@ -39,55 +39,55 @@ const theme = createTheme({
   palette: {
     mode: 'light',
     primary: {
-      main: '#0D1B2A', // Matching theme.css --primary
-      light: '#1B2937',
-      dark: '#0A1520',
+      main: '#2563eb', // Matching new theme.css --primary
+      light: '#3b82f6',
+      dark: '#1d4ed8',
     },
     secondary: {
-      main: '#FF7A00', // Matching theme.css --accent
-      light: '#FF8F1A',
-      dark: '#E66900',
+      main: '#0ea5e9', // Matching new theme.css --accent
+      light: '#38bdf8',
+      dark: '#0284c7',
     },
     background: {
-      default: '#FFFFFF', // Matching theme.css --surface
-      paper: '#FFFFFF',
+      default: '#f8fafc', // Matching new theme.css --surface-50
+      paper: '#ffffff',
     },
     text: {
-      primary: '#0D1B2A',
-      secondary: '#6C757D',
+      primary: '#0f172a', // Matching new theme.css --text-primary
+      secondary: '#64748b', // Matching new theme.css --text-muted
     },
   },
   typography: {
-    fontFamily: '"Lato", "Roboto", "Helvetica", "Arial", sans-serif', // Matching theme.css --font-body
+    fontFamily: '"Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif', // Matching new theme.css --font-family
     h1: {
-      fontFamily: '"Cormorant Garamond", serif', // Matching theme.css --font-heading
-      fontWeight: 500,
-      color: '#0D1B2A',
+      fontFamily: '"Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+      fontWeight: 700,
+      color: '#0f172a',
     },
     h2: {
-      fontFamily: '"Cormorant Garamond", serif',
-      fontWeight: 500,
-      color: '#0D1B2A',
+      fontFamily: '"Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+      fontWeight: 600,
+      color: '#0f172a',
     },
     h3: {
-      fontFamily: '"Cormorant Garamond", serif',
-      fontWeight: 500,
-      color: '#0D1B2A',
+      fontFamily: '"Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+      fontWeight: 600,
+      color: '#0f172a',
     },
     h4: {
-      fontFamily: '"Cormorant Garamond", serif',
-      fontWeight: 500,
-      color: '#0D1B2A',
+      fontFamily: '"Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+      fontWeight: 600,
+      color: '#0f172a',
     },
     h5: {
-      fontFamily: '"Cormorant Garamond", serif',
+      fontFamily: '"Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
       fontWeight: 500,
-      color: '#0D1B2A',
+      color: '#0f172a',
     },
     h6: {
-      fontFamily: '"Cormorant Garamond", serif',
+      fontFamily: '"Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
       fontWeight: 500,
-      color: '#0D1B2A',
+      color: '#0f172a',
     },
   },
   shape: {

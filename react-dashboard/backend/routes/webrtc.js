@@ -1,6 +1,9 @@
 const express = require('express');
 const rateLimit = require('express-rate-limit');
 const WebSocket = require('ws');
+const jwt = require('jsonwebtoken');
+const { User, Lesson } = require('../models');
+const aiTutorService = require('../services/aiTutor');
 
 const router = express.Router();
 
@@ -66,11 +69,30 @@ router.get('/stream', (req, res) => {
 });
 
 /**
- * Simple WebSocket route for direct OpenAI Realtime API connection
+ * Enhanced WebSocket route with AI Tutor integration
  */
-router.ws('/simple', (ws, req) => {
+router.ws('/simple', async (ws, req) => {
   const sessionId = `simple_${Date.now()}_${Math.random().toString(36).slice(2)}`;
-  console.log(`🎯 [${sessionId}] NEW Simple WebRTC connection - DIRECT OPENAI`);
+  console.log(`🎯 [${sessionId}] NEW Enhanced WebRTC connection with AI Tutor`);
+  
+  let currentUser = null;
+  let currentLesson = null;
+  let tutorSession = null;
+  let conversationBuffer = '';
+  let isProcessingResponse = false;
+  
+  // Extract user info from query params or headers
+  const token = req.query.token || req.headers.authorization?.replace('Bearer ', '');
+  
+  if (token) {
+    try {
+      const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key');
+      currentUser = await User.findByPk(decoded.userId);
+      console.log(`👤 [${sessionId}] User authenticated: ${currentUser?.name} (ID: ${currentUser?.id})`);
+    } catch (error) {
+      console.log(`⚠️ [${sessionId}] Token verification failed, proceeding as anonymous`);
+    }
+  }
   
   // Direct OpenAI WebSocket connection
   const openaiApiKey = process.env.OPENAI_API_KEY;
@@ -97,12 +119,36 @@ router.ws('/simple', (ws, req) => {
   openAiWs.on('open', () => {
     console.log(`✅ [${sessionId}] Connected to OpenAI Realtime API`);
     
-    // Send session configuration
+    // Send enhanced session configuration for AI Tutor
     const sessionUpdate = {
       type: 'session.update',
       session: {
         modalities: ['text', 'audio'],
-        instructions: 'Jsi přátelský AI asistent. Komunikuj pouze v češtině. Buď nápomocný a odpovídej krátce a jasně.',
+        instructions: `Jsi AI lektor a osobní vzdělávací asistent. Tvým úkolem je vést uživatele kompletní lekcí od začátku až do konce.
+
+TVOJE ROLE:
+- Jsi přátelský, profesionální AI lektor
+- Komunikuješ pouze v češtině
+- Vedeš strukturované lekce s jasným postupem
+- Držíš se tématu a struktury lekce
+- Jsi trpělivý a motivující
+
+STRUKTURA LEKCE:
+1. PŘEDSTAVENÍ - Představ lekci, cíle, odhadovanou délku
+2. OBSAH - Rozděl na segmenty, po každém polož kontrolní otázku
+3. TEST - Postupně pokládej připravené otázky
+4. VYHODNOCENÍ - Spočítej výsledky, vysvětli chyby
+5. DOPORUČENÍ - Navrhni další kroky
+
+PRAVIDLA:
+- Odpovídej krátce a jasně (max 3-4 věty najednou)
+- Po každém segmentu obsahu polož kontrolní otázku
+- Dotazy mimo téma zodpoví stručně, ale vrať se k lekci
+- V testu nesděluj správné odpovědi až do konce
+- Vždy uložíš výsledky do databáze
+- Motivuj uživatele a chval pokrok
+
+Začni uvítáním a zeptej se, jakou lekci chce uživatel absolvovat.`,
         voice: 'alloy',
         input_audio_format: 'pcm16',
         output_audio_format: 'pcm16',
@@ -119,12 +165,54 @@ router.ws('/simple', (ws, req) => {
     };
     
     openAiWs.send(JSON.stringify(sessionUpdate));
-    console.log(`⚙️ [${sessionId}] Session configuration sent`);
+    console.log(`⚙️ [${sessionId}] Enhanced AI Tutor session configuration sent`);
   });
   
-  openAiWs.on('message', (data) => {
+  openAiWs.on('message', async (data) => {
     try {
       const response = JSON.parse(data.toString());
+      
+      // Handle conversation transcription for AI Tutor integration
+      if (response.type === 'conversation.item.input_audio_transcription.completed') {
+        const userMessage = response.transcript;
+        console.log(`🗣️ [${sessionId}] User said: "${userMessage}"`);
+        
+        // Process with AI Tutor service if we have an active session
+        if (tutorSession && currentUser) {
+          try {
+            const tutorResponse = await aiTutorService.processUserMessage(
+              sessionId, 
+              userMessage, 
+              currentUser.id
+            );
+            
+            console.log(`🎓 [${sessionId}] AI Tutor response: ${tutorResponse.phase}`);
+            
+            // Send tutor context to OpenAI for better responses
+            if (tutorResponse.message) {
+              const contextMessage = {
+                type: 'conversation.item.create',
+                item: {
+                  type: 'message',
+                  role: 'system',
+                  content: [{
+                    type: 'text',
+                    text: `KONTEXT: Fáze lekce: ${tutorResponse.phase}. Odpověz uživateli: ${tutorResponse.message}`
+                  }]
+                }
+              };
+              
+              openAiWs.send(JSON.stringify(contextMessage));
+            }
+            
+          } catch (error) {
+            console.error(`❌ [${sessionId}] AI Tutor error:`, error);
+          }
+        } else {
+          // Handle lesson selection or initial setup
+          await handleInitialInteraction(userMessage);
+        }
+      }
       
       // Forward all OpenAI messages to browser
       if (ws.readyState === WebSocket.OPEN) {
@@ -140,6 +228,115 @@ router.ws('/simple', (ws, req) => {
       console.error(`❌ [${sessionId}] Error processing OpenAI message:`, error);
     }
   });
+
+  // Handle initial user interaction for lesson selection
+  async function handleInitialInteraction(userMessage) {
+    try {
+      console.log(`🎯 [${sessionId}] Processing initial interaction: "${userMessage}"`);
+      
+      // Try to extract lesson request
+      const lessonRequest = extractLessonRequest(userMessage);
+      
+      if (lessonRequest.lessonId && currentUser) {
+        // Start lesson session
+        const lesson = await Lesson.findByPk(lessonRequest.lessonId);
+        if (lesson) {
+          console.log(`📚 [${sessionId}] Starting lesson: ${lesson.title}`);
+          
+          const result = await aiTutorService.startLessonSession(
+            currentUser.id,
+            lessonRequest.lessonId,
+            sessionId
+          );
+          
+          if (result.success) {
+            tutorSession = result.sessionData;
+            currentLesson = lesson;
+            
+            // Send introduction message to OpenAI
+            const introMessage = {
+              type: 'conversation.item.create',
+              item: {
+                type: 'message',
+                role: 'system',
+                content: [{
+                  type: 'text',
+                  text: `LEKCE ZAČÍNÁ: ${result.introductionMessage}`
+                }]
+              }
+            };
+            
+            openAiWs.send(JSON.stringify(introMessage));
+            console.log(`✅ [${sessionId}] Lesson session started successfully`);
+          }
+        }
+      } else if (!currentUser) {
+        // Request user authentication
+        const authMessage = {
+          type: 'conversation.item.create',
+          item: {
+            type: 'message',
+            role: 'system',
+            content: [{
+              type: 'text',
+              text: 'Ahoj! Pro absolvování lekce se prosím přihlas do systému. Pak si můžeme vybrat vhodnou lekci.'
+            }]
+          }
+        };
+        
+        openAiWs.send(JSON.stringify(authMessage));
+      } else {
+        // Show available lessons
+        const lessons = await Lesson.findAll({ limit: 5 });
+        const lessonList = lessons.map(l => `- ${l.title} (ID: ${l.id})`).join('\n');
+        
+        const lessonSelectionMessage = {
+          type: 'conversation.item.create',
+          item: {
+            type: 'message',
+            role: 'system',
+            content: [{
+              type: 'text',
+              text: `Ahoj ${currentUser.name}! Vítej v AI Lektor systému. 
+
+Dostupné lekce:
+${lessonList}
+
+Kterou lekci si chceš vybrat? Řekni například "chci lekci základní představení" nebo "začněme s lekcí číslo 1".`
+            }]
+          }
+        };
+        
+        openAiWs.send(JSON.stringify(lessonSelectionMessage));
+      }
+      
+    } catch (error) {
+      console.error(`❌ [${sessionId}] Error handling initial interaction:`, error);
+    }
+  }
+
+  // Extract lesson request from user message
+  function extractLessonRequest(message) {
+    const normalized = message.toLowerCase();
+    
+    // Look for lesson ID numbers
+    const idMatch = normalized.match(/(?:lekc[ei]|lesson)\s*(?:číslo|number|id)?\s*(\d+)/);
+    if (idMatch) {
+      return { lessonId: parseInt(idMatch[1]) };
+    }
+    
+    // Look for lesson titles
+    if (normalized.includes('představení')) {
+      return { lessonId: 2 }; // Assuming lesson 2 is "Základní představení"
+    }
+    
+    // Default to first lesson
+    if (normalized.includes('začněme') || normalized.includes('první')) {
+      return { lessonId: 1 };
+    }
+    
+    return { lessonId: null };
+  }
   
   openAiWs.on('error', (error) => {
     console.error(`❌ [${sessionId}] OpenAI WebSocket error:`, error);
@@ -150,8 +347,10 @@ router.ws('/simple', (ws, req) => {
   
   openAiWs.on('close', () => {
     console.log(`🔌 [${sessionId}] OpenAI WebSocket closed`);
-    if (ws.readyState === WebSocket.OPEN) {
-      ws.close();
+    
+    // Clean up tutor session
+    if (tutorSession) {
+      aiTutorService.endSession(sessionId);
     }
   });
   
@@ -167,7 +366,6 @@ router.ws('/simple', (ws, req) => {
       } else {
         console.log(`⚠️ [${sessionId}] OpenAI not connected, cannot forward message`);
       }
-      
     } catch (error) {
       console.error(`❌ [${sessionId}] Error processing browser message:`, error);
     }
@@ -175,8 +373,14 @@ router.ws('/simple', (ws, req) => {
   
   ws.on('close', () => {
     console.log(`🔌 [${sessionId}] Browser WebSocket closed`);
+    
+    // Clean up
     if (openAiWs.readyState === WebSocket.OPEN) {
       openAiWs.close();
+    }
+    
+    if (tutorSession) {
+      aiTutorService.endSession(sessionId);
     }
   });
   

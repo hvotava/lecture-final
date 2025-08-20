@@ -33,6 +33,7 @@ import QuestionManager from './pages/QuestionManager';
 import ReviewDashboard from './pages/ReviewDashboard';
 import TestResults from './pages/TestResults';
 import WebRTCDemo from './pages/WebRTCDemo';
+import LessonSessions from './pages/LessonSessions';
 
 // Enhanced responsive theme - keeping MUI theme for existing components
 const theme = createTheme({
@@ -314,6 +315,17 @@ function App() {
                 <ProtectedRoute>
                   <ResponsiveSidebar>
                     <WebRTCDemo />
+                  </ResponsiveSidebar>
+                </ProtectedRoute>
+              }
+            />
+            
+            <Route
+              path="/dashboard/lesson-sessions"
+              element={
+                <ProtectedRoute adminOnly>
+                  <ResponsiveSidebar>
+                    <LessonSessions />
                   </ResponsiveSidebar>
                 </ProtectedRoute>
               }

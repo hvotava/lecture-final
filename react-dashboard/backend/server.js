@@ -95,6 +95,7 @@ app.use('/api/companies', require('./routes/companies'));
 app.use('/api/trainings', require('./routes/trainings'));
 app.use('/api/lessons', require('./routes/lessons'));
 app.use('/api/tests', require('./routes/tests'));
+app.use('/api/lesson-sessions', require('./routes/lesson-sessions'));
 app.use('/api/dashboard', require('./routes/dashboard'));
 app.use('/api/twilio', twilioRoutes);
 app.use('/api/webrtc', webrtcRoutes);

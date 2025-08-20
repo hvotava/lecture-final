@@ -501,12 +501,196 @@ TestSession.belongsTo(Attempt, { foreignKey: 'attempt_id' });
 
 Answer.belongsTo(Attempt, { foreignKey: 'attempt_id' });
 
-// TestResult model (TestResponse removed as duplicate)
-const TestResult = require('./TestResult');
+// TestResult model - aktivní
+const TestResult = sequelize.define('TestResult', {
+  id: {
+    type: DataTypes.INTEGER,
+    primaryKey: true,
+    autoIncrement: true
+  },
+  userId: {
+    type: DataTypes.INTEGER,
+    references: {
+      model: User,
+      key: 'id'
+    },
+    allowNull: false
+  },
+  lessonId: {
+    type: DataTypes.INTEGER,
+    references: {
+      model: Lesson,
+      key: 'id'
+    },
+    allowNull: true
+  },
+  testName: {
+    type: DataTypes.STRING,
+    allowNull: false
+  },
+  score: {
+    type: DataTypes.FLOAT,
+    allowNull: false
+  },
+  totalQuestions: {
+    type: DataTypes.INTEGER,
+    allowNull: false
+  },
+  correctAnswers: {
+    type: DataTypes.INTEGER,
+    allowNull: false
+  },
+  percentage: {
+    type: DataTypes.FLOAT,
+    allowNull: false
+  },
+  answers: {
+    type: DataTypes.JSON,
+    allowNull: true
+  },
+  duration: {
+    type: DataTypes.INTEGER, // in seconds
+    allowNull: true
+  },
+  completed_at: {
+    type: DataTypes.DATE,
+    defaultValue: DataTypes.NOW
+  }
+}, {
+  tableName: 'test_results',
+  timestamps: false
+});
+
+// LessonSession model - nový model pro kompletní lekce s AI tutorem
+const LessonSession = sequelize.define('LessonSession', {
+  id: {
+    type: DataTypes.INTEGER,
+    primaryKey: true,
+    autoIncrement: true
+  },
+  userId: {
+    type: DataTypes.INTEGER,
+    references: {
+      model: User,
+      key: 'id'
+    },
+    allowNull: false
+  },
+  lessonId: {
+    type: DataTypes.INTEGER,
+    references: {
+      model: Lesson,
+      key: 'id'
+    },
+    allowNull: true
+  },
+  sessionId: {
+    type: DataTypes.STRING,
+    allowNull: false,
+    unique: true
+  },
+  lessonTitle: {
+    type: DataTypes.STRING,
+    allowNull: false
+  },
+  status: {
+    type: DataTypes.ENUM('started', 'in_progress', 'testing', 'completed', 'abandoned'),
+    defaultValue: 'started'
+  },
+  currentPhase: {
+    type: DataTypes.ENUM('introduction', 'content', 'test', 'evaluation', 'completed'),
+    defaultValue: 'introduction'
+  },
+  startedAt: {
+    type: DataTypes.DATE,
+    defaultValue: DataTypes.NOW
+  },
+  completedAt: {
+    type: DataTypes.DATE,
+    allowNull: true
+  },
+  duration: {
+    type: DataTypes.INTEGER, // in seconds
+    allowNull: true
+  },
+  estimatedDuration: {
+    type: DataTypes.INTEGER, // in minutes
+    allowNull: true
+  },
+  // Test results
+  testQuestions: {
+    type: DataTypes.JSON,
+    allowNull: true
+  },
+  userAnswers: {
+    type: DataTypes.JSON,
+    allowNull: true
+  },
+  correctAnswers: {
+    type: DataTypes.INTEGER,
+    defaultValue: 0
+  },
+  totalQuestions: {
+    type: DataTypes.INTEGER,
+    defaultValue: 0
+  },
+  testScore: {
+    type: DataTypes.FLOAT,
+    defaultValue: 0
+  },
+  testPercentage: {
+    type: DataTypes.FLOAT,
+    defaultValue: 0
+  },
+  // Progress tracking
+  contentSegments: {
+    type: DataTypes.JSON,
+    allowNull: true
+  },
+  currentSegment: {
+    type: DataTypes.INTEGER,
+    defaultValue: 0
+  },
+  segmentProgress: {
+    type: DataTypes.JSON,
+    defaultValue: []
+  },
+  // Interaction tracking
+  interactionCount: {
+    type: DataTypes.INTEGER,
+    defaultValue: 0
+  },
+  questionsAsked: {
+    type: DataTypes.INTEGER,
+    defaultValue: 0
+  },
+  questionsAnswered: {
+    type: DataTypes.INTEGER,
+    defaultValue: 0
+  },
+  // AI feedback
+  feedback: {
+    type: DataTypes.TEXT,
+    allowNull: true
+  },
+  nextRecommendations: {
+    type: DataTypes.JSON,
+    allowNull: true
+  }
+}, {
+  tableName: 'lesson_sessions',
+  timestamps: false
+});
 
 // TestResult associations - ACTIVATED
 TestResult.belongsTo(User, { foreignKey: 'userId' });
 User.hasMany(TestResult, { foreignKey: 'userId' });
+
+// LessonSession associations
+LessonSession.belongsTo(User, { foreignKey: 'userId' });
+LessonSession.belongsTo(Lesson, { foreignKey: 'lessonId' });
+User.hasMany(LessonSession, { foreignKey: 'userId' });
+Lesson.hasMany(LessonSession, { foreignKey: 'lessonId' });
 
 module.exports = {
   sequelize,
@@ -519,5 +703,6 @@ module.exports = {
   Attempt,
   TestSession,
   Answer,
-  TestResult
+  TestResult,
+  LessonSession
 }; 

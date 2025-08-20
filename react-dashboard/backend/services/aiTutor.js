@@ -5,15 +5,40 @@ class AITutorService {
     this.activeSessions = new Map(); // sessionId -> session data
   }
 
-  // Vytvoření nové lekce session
+  // Vytvoření nové lekce session - automaticky načte první lekci z uživatelova školení
   async startLessonSession(userId, lessonId, sessionId) {
     try {
-      console.log(`🎓 [${sessionId}] Starting lesson session for user ${userId}, lesson ${lessonId}`);
+      console.log(`🎓 [${sessionId}] Starting lesson session for user ${userId}`);
       
-      // Načtení lekce z databáze
-      const lesson = await Lesson.findByPk(lessonId);
-      if (!lesson) {
-        throw new Error(`Lesson with ID ${lessonId} not found`);
+      let lesson = null;
+      
+      // Pokud není zadané lessonId, najdi první lekci z uživatelova školení
+      if (!lessonId) {
+        const user = await User.findByPk(userId);
+        if (!user || !user.training_type) {
+          throw new Error(`User ${userId} has no assigned training type`);
+        }
+        
+        console.log(`📚 [${sessionId}] Finding first lesson for training: ${user.training_type}`);
+        
+        // Najdi první lekci z daného školení (nejnižší lesson_number)
+        lesson = await Lesson.findOne({
+          where: { trainingId: user.training_type },
+          order: [['lesson_number', 'ASC']],
+          limit: 1
+        });
+        
+        if (!lesson) {
+          throw new Error(`No lessons found for training ${user.training_type}`);
+        }
+        
+        console.log(`✅ [${sessionId}] Found first lesson: "${lesson.title}" (ID: ${lesson.id})`);
+      } else {
+        // Načtení konkrétní lekce z databáze
+        lesson = await Lesson.findByPk(lessonId);
+        if (!lesson) {
+          throw new Error(`Lesson with ID ${lessonId} not found`);
+        }
       }
 
       // Odhad délky lekce na základě obsahu

@@ -234,43 +234,37 @@ Začni uvítáním a zeptej se, jakou lekci chce uživatel absolvovat.`,
     try {
       console.log(`🎯 [${sessionId}] Processing initial interaction: "${userMessage}"`);
       
-      // Try to extract lesson request
-      const lessonRequest = extractLessonRequest(userMessage);
-      
-      if (lessonRequest.lessonId && currentUser) {
-        // Start lesson session
-        const lesson = await Lesson.findByPk(lessonRequest.lessonId);
-        if (lesson) {
-          console.log(`📚 [${sessionId}] Starting lesson: ${lesson.title}`);
+      if (currentUser) {
+        // Automaticky spustí první lekci z uživatelova školení
+        console.log(`🚀 [${sessionId}] Auto-starting lesson from user's training`);
+        
+        const result = await aiTutorService.startLessonSession(
+          currentUser.id,
+          null, // null = automaticky najde první lekci z training_type
+          sessionId
+        );
           
-          const result = await aiTutorService.startLessonSession(
-            currentUser.id,
-            lessonRequest.lessonId,
-            sessionId
-          );
+        if (result.success) {
+          tutorSession = result.sessionData;
+          currentLesson = result.sessionData.lesson;
           
-          if (result.success) {
-            tutorSession = result.sessionData;
-            currentLesson = lesson;
-            
-            // Send introduction message to OpenAI
-            const introMessage = {
-              type: 'conversation.item.create',
-              item: {
-                type: 'message',
-                role: 'system',
-                content: [{
-                  type: 'text',
-                  text: `LEKCE ZAČÍNÁ: ${result.introductionMessage}`
-                }]
-              }
-            };
-            
-            openAiWs.send(JSON.stringify(introMessage));
-            console.log(`✅ [${sessionId}] Lesson session started successfully`);
-          }
+          // Send introduction message to OpenAI
+          const introMessage = {
+            type: 'conversation.item.create',
+            item: {
+              type: 'message',
+              role: 'system',
+              content: [{
+                type: 'text',
+                text: `LEKCE ZAČÍNÁ: ${result.introductionMessage}`
+              }]
+            }
+          };
+          
+          openAiWs.send(JSON.stringify(introMessage));
+          console.log(`✅ [${sessionId}] Lesson session started successfully`);
         }
-      } else if (!currentUser) {
+      } else {
         // Request user authentication
         const authMessage = {
           type: 'conversation.item.create',
@@ -285,29 +279,6 @@ Začni uvítáním a zeptej se, jakou lekci chce uživatel absolvovat.`,
         };
         
         openAiWs.send(JSON.stringify(authMessage));
-      } else {
-        // Show available lessons
-        const lessons = await Lesson.findAll({ limit: 5 });
-        const lessonList = lessons.map(l => `- ${l.title} (ID: ${l.id})`).join('\n');
-        
-        const lessonSelectionMessage = {
-          type: 'conversation.item.create',
-          item: {
-            type: 'message',
-            role: 'system',
-            content: [{
-              type: 'text',
-              text: `Ahoj ${currentUser.name}! Vítej v AI Lektor systému. 
-
-Dostupné lekce:
-${lessonList}
-
-Kterou lekci si chceš vybrat? Řekni například "chci lekci základní představení" nebo "začněme s lekcí číslo 1".`
-            }]
-          }
-        };
-        
-        openAiWs.send(JSON.stringify(lessonSelectionMessage));
       }
       
     } catch (error) {

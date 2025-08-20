@@ -1,6 +1,7 @@
 // Voice Navigation System for AI Tutor
 const { User, Lesson, Test } = require('../models');
 const { LanguageTranslator } = require('../services/language-translator');
+const aiTutorService = require('../services/aiTutor');
 
 // Navigation commands mapping
 const NAVIGATION_COMMANDS = {
@@ -60,6 +61,26 @@ class VoiceNavigationManager {
         questions = [];
       }
       
+    // Initialize AI Tutor session if user is available
+    let tutorSession = null;
+    if (lessonData.user_id) {
+      try {
+        console.log(`🎓 Initializing AI Tutor session for user ${lessonData.user_id}`);
+        const result = await aiTutorService.startLessonSession(
+          lessonData.user_id,
+          lessonData.lesson_id,
+          callSid
+        );
+        
+        if (result.success) {
+          tutorSession = result.sessionData;
+          console.log(`✅ AI Tutor session created successfully`);
+        }
+      } catch (error) {
+        console.error(`❌ Failed to initialize AI Tutor session:`, error);
+      }
+    }
+
     const state = {
       callSid,
         lesson: {
@@ -76,7 +97,8 @@ class VoiceNavigationManager {
       testCompleted: false,
       navigationHistory: [],
       recordingUrl: null,
-      recordingDuration: null
+      recordingDuration: null,
+      tutorSession: tutorSession  // Store AI Tutor session
     };
     
     this.conversationStates.set(callSid, state);
@@ -121,7 +143,7 @@ class VoiceNavigationManager {
     }
   }
 
-  // Process user response with navigation
+  // Process user response with navigation and AI Tutor integration
   static async processUserResponse(userInput, callSid, userPhone) {
     const state = this.getState(callSid);
     if (!state) {
@@ -130,6 +152,27 @@ class VoiceNavigationManager {
     }
 
     console.log(`🎯 Processing user input: "${userInput}" in state: ${state.currentState}`);
+
+    // If AI Tutor session is available, use it for processing
+    if (state.tutorSession) {
+      try {
+        console.log(`🎓 Using AI Tutor for processing user input`);
+        const tutorResponse = await aiTutorService.processUserMessage(
+          callSid,
+          userInput,
+          state.tutorSession.userId
+        );
+        
+        console.log(`🤖 AI Tutor response: ${tutorResponse.phase}`);
+        
+        // Convert AI Tutor response to Twilio format
+        return this.convertTutorResponseToTwilio(tutorResponse, state);
+        
+      } catch (error) {
+        console.error(`❌ AI Tutor processing error:`, error);
+        // Fall back to original logic
+      }
+    }
 
     // Process based on current state
     switch (state.currentState) {
@@ -150,6 +193,58 @@ class VoiceNavigationManager {
       
       default:
         return this.handleLessonPhase(userInput, state, userPhone);
+    }
+  }
+
+  // Convert AI Tutor response to Twilio format
+  static convertTutorResponseToTwilio(tutorResponse, state) {
+    const { message, phase, action, results } = tutorResponse;
+    
+    switch (phase) {
+      case 'introduction':
+        return {
+          questionType: 'lesson_intro',
+          feedback: message,
+          nextQuestion: null
+        };
+        
+      case 'content':
+        return {
+          questionType: 'lesson_content',
+          feedback: message,
+          nextQuestion: null
+        };
+        
+      case 'test':
+        return {
+          questionType: 'test_question',
+          feedback: message,
+          nextQuestion: null
+        };
+        
+      case 'evaluation':
+        return {
+          questionType: 'test_results',
+          feedback: message,
+          nextQuestion: null,
+          score: results?.percentage || 0,
+          totalQuestions: results?.totalQuestions || 0,
+          correctAnswers: results?.correctCount || 0
+        };
+        
+      case 'completed':
+        return {
+          questionType: 'session_complete',
+          feedback: message,
+          nextQuestion: null
+        };
+        
+      default:
+        return {
+          questionType: 'lesson_content',
+          feedback: message || 'Pokračujeme v lekci.',
+          nextQuestion: null
+        };
     }
   }
 

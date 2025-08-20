@@ -25,12 +25,15 @@ const SimpleWebRTCPhone: React.FC<SimpleWebRTCPhoneProps> = ({
     duration: 0
   });
   const [isMuted, setIsMuted] = useState(false);
+  const [speakerMuted, setSpeakerMuted] = useState(false);
   const [isConnected, setIsConnected] = useState(false);
 
   const websocket = useRef<WebSocket | null>(null);
-  const audioContext = useRef<AudioContext | null>(null);
+  const inputAudioContext = useRef<AudioContext | null>(null);
+  const outputAudioContext = useRef<AudioContext | null>(null);
   const mediaStream = useRef<MediaStream | null>(null);
   const processor = useRef<ScriptProcessorNode | null>(null);
+  const gainNode = useRef<GainNode | null>(null);
   const durationInterval = useRef<NodeJS.Timeout | null>(null);
   const callId = useRef<string>('');
 
@@ -142,7 +145,9 @@ const SimpleWebRTCPhone: React.FC<SimpleWebRTCPhoneProps> = ({
           
           if (data.type === 'response.audio.delta' && data.delta) {
             // Přehrání audio odpovědi z OpenAI
-            playAudioDelta(data.delta);
+            if (!speakerMuted) {
+              playAudioDelta(data.delta);
+            }
           } else if (data.type === 'session.created') {
             console.log('[SimpleWebRTC] OpenAI session vytvořena');
             // Spustíme nahrávání až po vytvoření session
@@ -185,8 +190,13 @@ const SimpleWebRTCPhone: React.FC<SimpleWebRTCPhoneProps> = ({
 
   const playAudioDelta = async (audioData: string): Promise<void> => {
     try {
-      if (!audioContext.current) {
-        audioContext.current = new AudioContext();
+      // Separate output AudioContext to prevent feedback
+      if (!outputAudioContext.current) {
+        outputAudioContext.current = new AudioContext({ sampleRate: 24000 });
+        
+        // Create gain node for speaker volume control
+        gainNode.current = outputAudioContext.current.createGain();
+        gainNode.current.connect(outputAudioContext.current.destination);
       }
 
       // Dekódování base64 PCM16 dat
@@ -207,13 +217,13 @@ const SimpleWebRTCPhone: React.FC<SimpleWebRTCPhoneProps> = ({
       }
 
       // Vytvoření audio buffer
-      const audioBuffer = audioContext.current.createBuffer(1, float32Array.length, 24000);
+      const audioBuffer = outputAudioContext.current.createBuffer(1, float32Array.length, 24000);
       audioBuffer.getChannelData(0).set(float32Array);
       
-      // Přehrání
-      const source = audioContext.current.createBufferSource();
+      // Přehrání přes gain node (ne přímo na destination)
+      const source = outputAudioContext.current.createBufferSource();
       source.buffer = audioBuffer;
-      source.connect(audioContext.current.destination);
+      source.connect(gainNode.current!);
       source.start();
       
     } catch (error) {
@@ -225,26 +235,33 @@ const SimpleWebRTCPhone: React.FC<SimpleWebRTCPhoneProps> = ({
     try {
       console.log('[SimpleWebRTC] Spouštím nahrávání audio...');
       
-      // Získání mikrofonu s přesnou konfigurací pro OpenAI
+      // Získání mikrofonu s přesnou konfigurací pro OpenAI a echo cancellation
       mediaStream.current = await navigator.mediaDevices.getUserMedia({
         audio: {
           echoCancellation: true,
           noiseSuppression: true,
           autoGainControl: true,
           sampleRate: 24000,
-          channelCount: 1
-        }
+          channelCount: 1,
+          // Advanced echo cancellation settings
+          googEchoCancellation: true,
+          googAutoGainControl: true,
+          googNoiseSuppression: true,
+          googHighpassFilter: true,
+          googTypingNoiseDetection: true,
+          googAudioMirroring: false
+        } as any
       });
 
-      // Vytvoření AudioContext s 24kHz sample rate
-      audioContext.current = new (window.AudioContext || (window as any).webkitAudioContext)({
+      // Separate input AudioContext for recording
+      inputAudioContext.current = new (window.AudioContext || (window as any).webkitAudioContext)({
         sampleRate: 24000
       });
 
-      const source = audioContext.current.createMediaStreamSource(mediaStream.current);
+      const source = inputAudioContext.current.createMediaStreamSource(mediaStream.current);
       
       // ScriptProcessorNode pro real-time audio processing
-      processor.current = audioContext.current.createScriptProcessor(4096, 1, 1);
+      processor.current = inputAudioContext.current.createScriptProcessor(4096, 1, 1);
       
       processor.current.onaudioprocess = (event) => {
         if (isMuted || !websocket.current || websocket.current.readyState !== WebSocket.OPEN) {
@@ -252,6 +269,12 @@ const SimpleWebRTCPhone: React.FC<SimpleWebRTCPhoneProps> = ({
         }
 
         const inputData = event.inputBuffer.getChannelData(0);
+        
+        // Simple noise gate to prevent low-level feedback
+        const rms = Math.sqrt(inputData.reduce((sum, sample) => sum + sample * sample, 0) / inputData.length);
+        if (rms < 0.01) { // Threshold for noise gate
+          return;
+        }
         
         // Konverze na PCM16
         const pcm16Buffer = float32ToPCM16(inputData);
@@ -264,11 +287,11 @@ const SimpleWebRTCPhone: React.FC<SimpleWebRTCPhoneProps> = ({
         }));
       };
 
-      // Připojení audio pipeline
+      // Připojení audio pipeline (bez connection na destination!)
       source.connect(processor.current);
-      processor.current.connect(audioContext.current.destination);
+      // IMPORTANT: Don't connect processor to destination to prevent feedback
       
-      console.log('[SimpleWebRTC] Audio nahrávání spuštěno (24kHz, mono, PCM16)');
+      console.log('[SimpleWebRTC] Audio nahrávání spuštěno (24kHz, mono, PCM16) s echo cancellation');
       
     } catch (error) {
       console.error('[SimpleWebRTC] Chyba při spuštění nahrávání:', error);
@@ -291,11 +314,18 @@ const SimpleWebRTCPhone: React.FC<SimpleWebRTCPhoneProps> = ({
       mediaStream.current = null;
     }
 
-    // Uzavření AudioContext
-    if (audioContext.current) {
-      audioContext.current.close();
-      audioContext.current = null;
+    // Uzavření AudioContexts
+    if (inputAudioContext.current) {
+      inputAudioContext.current.close();
+      inputAudioContext.current = null;
     }
+
+    if (outputAudioContext.current) {
+      outputAudioContext.current.close();
+      outputAudioContext.current = null;
+    }
+
+    gainNode.current = null;
 
     // Uzavření WebSocket
     if (websocket.current) {
@@ -314,7 +344,15 @@ const SimpleWebRTCPhone: React.FC<SimpleWebRTCPhoneProps> = ({
 
   const toggleMute = (): void => {
     setIsMuted(!isMuted);
-    console.log('[SimpleWebRTC] Mute:', !isMuted);
+    console.log('[SimpleWebRTC] Mikrofon mute:', !isMuted);
+  };
+
+  const toggleSpeaker = (): void => {
+    setSpeakerMuted(!speakerMuted);
+    if (gainNode.current) {
+      gainNode.current.gain.value = speakerMuted ? 1.0 : 0.0;
+    }
+    console.log('[SimpleWebRTC] Reproduktor mute:', !speakerMuted);
   };
 
   const formatDuration = (seconds: number): string => {
@@ -416,6 +454,16 @@ const SimpleWebRTCPhone: React.FC<SimpleWebRTCPhoneProps> = ({
                 >
                   {isMuted ? <MicOff size={24} /> : <Mic size={24} />}
                 </Button>
+
+                <Button
+                  variant={speakerMuted ? 'warning' : 'secondary'}
+                  size="lg"
+                  className="rounded-circle p-3"
+                  onClick={toggleSpeaker}
+                  style={{ width: '60px', height: '60px' }}
+                >
+                  {speakerMuted ? <VolumeX size={24} /> : <Volume2 size={24} />}
+                </Button>
               </>
             )}
           </div>
@@ -435,12 +483,20 @@ const SimpleWebRTCPhone: React.FC<SimpleWebRTCPhoneProps> = ({
                   </span>
                 )}
               </small>
-              {isMuted && (
-                <small className="text-warning d-block mt-1">
-                  <MicOff size={14} className="me-1" />
-                  Mikrofon ztlumen
-                </small>
-              )}
+              <div className="mt-2 d-flex justify-content-center gap-3">
+                {isMuted && (
+                  <small className="text-warning">
+                    <MicOff size={14} className="me-1" />
+                    Mikrofon ztlumen
+                  </small>
+                )}
+                {speakerMuted && (
+                  <small className="text-warning">
+                    <VolumeX size={14} className="me-1" />
+                    Reproduktor ztlumen
+                  </small>
+                )}
+              </div>
             </div>
           )}
         </Card.Body>

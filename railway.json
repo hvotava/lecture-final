@@ -11,9 +11,8 @@
     "restartPolicyMaxRetries": 10
   },
   "variables": {
-    "RAILPACK_NO_CACHE": "true",
-    "RAILPACK_CACHE_DIR": "/tmp",
+    "NO_CACHE": "1",
     "NODE_ENV": "production"
   },
-  "version": "2025-08-20-00:05-rootdir-frontend"
+  "version": "2025-08-20-00:10-no-cache-fix"
 } 

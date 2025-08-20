@@ -1,85 +1,10 @@
-# RAILPACK CACHE FIX: Prevent ALL cache issues
-# This prevents RAILPACK from trying to cache any problematic folders
-
-# Force exclude ALL problematic directories with aggressive patterns
-**/node_modules/
-**/node_modules/**
-**/node_modules/**/**
-**/node_modules/**/**/**
-**/build/
-**/dist/
-**/.cache/
-**/.npm/
-**/.yarn/
-**/cache/
-**/tmp/
-**/coverage/
-**/test-results/
-**/playwright-report/
-**/.nyc_output/
-**/junit.xml
-
-# Node.js specific exclusions - ALL variations
+# RAILPACK with rootDirectory - basic exclusions only
 node_modules/
-**/node_modules/
-**/node_modules/**
-**/node_modules/**/**
-**/node_modules/**/**/**
+.cache/
 .npm/
 .yarn/
-.cache/
-
-# Build artifacts - ALL variations
 build/
 dist/
-.next/
-.nuxt/
-target/
-out/
-**/build/
-**/dist/
-**/build/**/**
-**/dist/**/**
-
-# Environment and config
 .env*
-.env.local
-.env.production
-.env.development
-
-# IDE and OS
-.vscode/
-.idea/
 .DS_Store
-Thumbs.db
-*.swp
-*.swo
-*~
-
-# Logs
-*.log
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-
-# Git
-.git/
-*.md
-!README.md
-
-# Docker (force RAILPACK)
-Dockerfile*
-.dockerignore
-
-# Additional aggressive exclusions
-**/coverage/
-**/test-results/
-**/playwright-report/
-**/.nyc_output/
-**/junit.xml
-**/node_modules/**/**
-**/build/**/**
-**/dist/**/**
-**/node_modules/**/**/**
-**/build/**/**/**
-**/dist/**/**/** 
+*.log 

@@ -1,13 +1,15 @@
 {
   "$schema": "https://railway.app/railway.schema.json",
   "build": {
-    "builder": "RAILPACK"
+    "builder": "RAILPACK",
+    "buildCommand": "npm run start:prod"
   },
   "deploy": {
+    "startCommand": "npm start",
     "healthcheckPath": "/api/health",
     "healthcheckTimeout": 100,
     "restartPolicyType": "ON_FAILURE",
     "restartPolicyMaxRetries": 10
   },
-  "version": "2025-08-19-23:30-railway-docs"
+  "version": "2025-08-19-23:35-build-command-fix"
 } 

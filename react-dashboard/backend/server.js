@@ -307,6 +307,9 @@ const createDefaultAdmin = async () => {
     
     if (existingAdmin) {
       console.log('✅ Admin account already exists');
+      console.log('📧 Admin email:', existingAdmin.email);
+      console.log('🔑 Admin role:', existingAdmin.role);
+      console.log('👤 Admin name:', existingAdmin.name);
       return;
     }
 

@@ -97,29 +97,29 @@ const StatCard: React.FC<StatCardProps> = ({ title, value, icon, color, change, 
   };
   
   return (
-    <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 hover:shadow-md transition-all duration-300 hover:-translate-y-1">
-      <div className="flex items-center justify-between">
+    <div className="bg-white rounded-3xl p-8 shadow-sm border border-gray-100 hover:shadow-xl transition-all duration-300 hover:-translate-y-1 group">
+      <div className="flex items-start justify-between">
         <div className="flex-1">
-          <p className="text-sm font-medium text-gray-600 mb-2">
+          <p className="text-sm font-semibold text-gray-500 mb-3 uppercase tracking-wider">
               {title}
           </p>
-          <h3 className="text-3xl font-bold mb-2" style={{ color }}>
+          <h3 className="text-4xl font-extrabold mb-3" style={{ color }}>
               {value}
           </h3>
             {change && (
-            <div className={`flex items-center space-x-1 ${getTrendColor()}`}>
+            <div className={`flex items-center space-x-2 ${getTrendColor()}`}>
               {getTrendIcon()}
-              <span className="text-sm font-medium">
+              <span className="text-sm font-semibold">
                 {change}
               </span>
             </div>
           )}
         </div>
         <div
-          className="w-14 h-14 rounded-2xl flex items-center justify-center"
+          className="w-16 h-16 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform duration-300"
           style={{ backgroundColor: `${color}15` }}
         >
-          <span style={{ color }}>
+          <span style={{ color }} className="text-xl">
             {icon}
           </span>
         </div>
@@ -138,20 +138,20 @@ const QuickActionButton: React.FC<{
 }> = ({ title, description, icon, onClick, color }) => (
   <button
     onClick={onClick}
-    className="w-full bg-white rounded-xl p-4 text-left hover:shadow-md transition-all duration-200 border border-gray-100 hover:-translate-y-1"
+    className="w-full bg-gray-50 rounded-2xl p-6 text-left hover:shadow-lg hover:bg-white transition-all duration-300 border border-gray-100 hover:-translate-y-1 group"
   >
     <div className="flex items-center space-x-4">
       <div
-        className="w-12 h-12 rounded-xl flex items-center justify-center"
+        className="w-14 h-14 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform duration-300"
         style={{ backgroundColor: `${color}15` }}
       >
-        <span style={{ color }}>
+        <span style={{ color }} className="text-lg">
           {icon}
         </span>
       </div>
       <div className="flex-1">
-        <h4 className="font-semibold text-gray-900 mb-1">{title}</h4>
-        <p className="text-sm text-gray-600">{description}</p>
+        <h4 className="font-bold text-gray-900 mb-2 text-lg">{title}</h4>
+        <p className="text-sm text-gray-600 leading-relaxed">{description}</p>
       </div>
     </div>
   </button>
@@ -224,20 +224,20 @@ const Dashboard: React.FC = () => {
   const chartColors = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6'];
 
   return (
-    <div className="max-w-7xl mx-auto space-y-8">
+    <div className="space-y-8">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">
+          <h1 className="text-4xl font-bold text-gray-900 mb-2 leading-tight">
             Vítejte zpět, {user?.name}!
           </h1>
-          <p className="text-gray-600">
+          <p className="text-lg text-gray-600">
             Přehled vaší vzdělávací platformy
           </p>
         </div>
         <button
           onClick={fetchDashboardStats}
-          className="mt-4 sm:mt-0 inline-flex items-center space-x-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors duration-200"
+          className="mt-4 sm:mt-0 inline-flex items-center space-x-2 bg-blue-600 text-white px-6 py-3 rounded-xl hover:bg-blue-700 hover:shadow-lg transition-all duration-200 font-medium"
         >
           <RefreshIcon />
           <span>Obnovit data</span>
@@ -245,7 +245,7 @@ const Dashboard: React.FC = () => {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
         <StatCard
           title="Celkem uživatelů"
           value={stats.overview.totalUsers}
@@ -279,8 +279,8 @@ const Dashboard: React.FC = () => {
       {/* Charts Section */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         {/* Activity Chart */}
-        <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
-          <h3 className="text-xl font-bold text-gray-900 mb-6">Aktivita platformy</h3>
+        <div className="bg-white rounded-3xl p-8 shadow-sm border border-gray-100 hover:shadow-md transition-shadow duration-300">
+          <h3 className="text-2xl font-bold text-gray-900 mb-8">Aktivita platformy</h3>
           <div className="h-80">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={stats.activityChart}>
@@ -321,8 +321,8 @@ const Dashboard: React.FC = () => {
         </div>
 
         {/* Users by Role Chart */}
-        <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
-          <h3 className="text-xl font-bold text-gray-900 mb-6">Uživatelé podle rolí</h3>
+        <div className="bg-white rounded-3xl p-8 shadow-sm border border-gray-100 hover:shadow-md transition-shadow duration-300">
+          <h3 className="text-2xl font-bold text-gray-900 mb-8">Uživatelé podle rolí</h3>
           <div className="h-80">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
@@ -365,8 +365,8 @@ const Dashboard: React.FC = () => {
       </div>
 
         {/* Top Companies */}
-      <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
-        <h3 className="text-xl font-bold text-gray-900 mb-6">Nejaktivnější firmy</h3>
+      <div className="bg-white rounded-3xl p-8 shadow-sm border border-gray-100 hover:shadow-md transition-shadow duration-300">
+        <h3 className="text-2xl font-bold text-gray-900 mb-8">Nejaktivnější firmy</h3>
         <div className="space-y-4">
               {stats.topCompanies.map((company, index) => (
             <div key={company.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-xl">
@@ -395,8 +395,8 @@ const Dashboard: React.FC = () => {
       </div>
 
       {/* Quick Actions */}
-      <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
-        <h3 className="text-xl font-bold text-gray-900 mb-6">Rychlé akce</h3>
+      <div className="bg-white rounded-3xl p-8 shadow-sm border border-gray-100 hover:shadow-md transition-shadow duration-300">
+        <h3 className="text-2xl font-bold text-gray-900 mb-8">Rychlé akce</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           <QuickActionButton
             title="Přidat uživatele"

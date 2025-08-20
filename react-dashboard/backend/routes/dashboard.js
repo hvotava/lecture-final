@@ -33,8 +33,19 @@ router.get('/debug', auth, async (req, res) => {
   }
 });
 
-// GET dashboard statistiky (pouze pro admin)
-router.get('/stats', auth, adminOnly, async (req, res) => {
+// GET dashboard statistiky (pouze pro admin)  
+router.get('/stats', auth, (req, res, next) => {
+  console.log('🔐 Dashboard stats auth check:', {
+    user: req.user ? {
+      id: req.user.id,
+      email: req.user.email, 
+      role: req.user.role,
+      name: req.user.name
+    } : 'No user',
+    isAdmin: req.user?.role === 'admin'
+  });
+  next();
+}, adminOnly, async (req, res) => {
   try {
     console.log('📊 Dashboard stats request from user:', req.user?.role, req.user?.email);
     

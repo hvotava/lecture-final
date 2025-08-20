@@ -98,7 +98,7 @@ export const HeroInteractive: React.FC = () => {
             transition={{
               duration: particle.speed * 10,
               repeat: Infinity,
-              ease: "linear" as const,
+              ease: "linear",
               delay: particle.id * 0.1,
             }}
           />
@@ -161,14 +161,14 @@ export const HeroInteractive: React.FC = () => {
                     transition={{
                       duration: 20,
                       repeat: Infinity,
-                      ease: "linear" as const
+                      ease: "linear"
                     }}
                     className="absolute inset-0 bg-gradient-to-r from-purple-600 via-pink-600 to-cyan-600 rounded-full blur-lg opacity-75 group-hover:opacity-100"
                   />
                   <div className="relative bg-black/50 backdrop-blur-xl border border-purple-500/50 rounded-full px-6 py-3 flex items-center space-x-3">
                     <motion.div
                       animate={{ rotate: [0, 360] }}
-                      transition={{ duration: 3, repeat: Infinity, ease: "linear" as const }}
+                      transition={{ duration: 3, repeat: Infinity, ease: "linear" }}
                     >
                       <Cpu className="text-cyan-400" size={20} />
                     </motion.div>
@@ -197,7 +197,7 @@ export const HeroInteractive: React.FC = () => {
                     transition={{
                       duration: 5,
                       repeat: Infinity,
-                      ease: "linear" as const
+                      ease: "linear"
                     }}
                     style={{
                       backgroundSize: '200% 200%',
@@ -213,7 +213,7 @@ export const HeroInteractive: React.FC = () => {
                     transition={{
                       duration: 5,
                       repeat: Infinity,
-                      ease: "linear" as const,
+                      ease: "linear",
                       delay: 0.5
                     }}
                     style={{
@@ -314,7 +314,7 @@ export const HeroInteractive: React.FC = () => {
                     transition={{
                       duration: 3,
                       repeat: Infinity,
-                      ease: "linear" as const
+                      ease: "linear"
                     }}
                     style={{
                       backgroundSize: '200% 200%',
@@ -376,7 +376,7 @@ export const HeroInteractive: React.FC = () => {
                 >
                   <motion.div
                     animate={{ rotate: [0, 360] }}
-                    transition={{ duration: 3, repeat: Infinity, ease: "linear" as const }}
+                    transition={{ duration: 3, repeat: Infinity, ease: "linear" }}
                   >
                     <Brain size={16} className="text-cyan-400" />
                   </motion.div>
@@ -409,7 +409,7 @@ export const HeroInteractive: React.FC = () => {
                   transition={{
                     duration: 20,
                     repeat: Infinity,
-                    ease: "linear" as const
+                    ease: "linear"
                   }}
                 >
                   <motion.div
@@ -426,13 +426,13 @@ export const HeroInteractive: React.FC = () => {
                     transition={{
                       duration: 4,
                       repeat: Infinity,
-                      ease: "easeInOut" as const as const
+                      ease: "easeInOut"
                     }}
                   >
                     <div className="absolute inset-4 bg-black/20 backdrop-blur-xl rounded-full border border-white/30 flex items-center justify-center">
                       <motion.div
                         animate={{ rotate: [0, -360] }}
-                        transition={{ duration: 15, repeat: Infinity, ease: "linear" as const }}
+                        transition={{ duration: 15, repeat: Infinity, ease: "linear" }}
                       >
                         <Brain size={80} className="text-white" />
                       </motion.div>
@@ -460,7 +460,7 @@ export const HeroInteractive: React.FC = () => {
                     transition={{
                       duration: 10 + index * 2,
                       repeat: Infinity,
-                      ease: "linear" as const
+                      ease: "linear"
                     }}
                   >
                     <motion.div
@@ -503,7 +503,7 @@ export const HeroInteractive: React.FC = () => {
                       transition={{
                         duration: 3,
                         repeat: Infinity,
-                        ease: "linear" as const
+                        ease: "linear"
                       }}
                     >
                       <stop offset="0%" stopColor="#8B5CF6" stopOpacity="0.8" />
@@ -532,7 +532,7 @@ export const HeroInteractive: React.FC = () => {
                         duration: 4,
                         delay: i * 0.3,
                         repeat: Infinity,
-                        ease: "easeInOut" as const as const
+                        ease: "easeInOut"
                       }}
                     />
                   ))}

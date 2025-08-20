@@ -1,5 +1,5 @@
 import React from 'react';
-import { motion } from 'framer-motion';
+import { motion, Variants } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { Play, UserPlus, ArrowRight } from 'lucide-react';
 
@@ -141,7 +141,7 @@ export const Hero: React.FC = () => {
               {/* Floating Elements */}
               <motion.div
                 animate={{ y: [0, -10, 0] }}
-                transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" as const }}
+                transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
                 className="absolute -top-6 -left-6 w-24 h-24 bg-accent/20 rounded-2xl backdrop-blur-sm border border-white/10 flex items-center justify-center"
               >
                 <svg className="w-12 h-12 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -151,7 +151,7 @@ export const Hero: React.FC = () => {
 
               <motion.div
                 animate={{ y: [0, 10, 0] }}
-                transition={{ duration: 2.5, repeat: Infinity, ease: "easeInOut" as const, delay: 0.5 }}
+                transition={{ duration: 2.5, repeat: Infinity, ease: "easeInOut", delay: 0.5 }}
                 className="absolute -bottom-4 -right-4 w-20 h-20 bg-white/10 rounded-xl backdrop-blur-sm border border-white/20 flex items-center justify-center"
               >
                 <svg className="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -161,7 +161,7 @@ export const Hero: React.FC = () => {
 
               <motion.div
                 animate={{ rotate: [0, 360] }}
-                transition={{ duration: 20, repeat: Infinity, ease: "linear" as const }}
+                transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
                 className="absolute top-1/2 -right-8 w-16 h-16 bg-gradient-to-br from-accent/30 to-primary/30 rounded-full backdrop-blur-sm border border-white/10 flex items-center justify-center"
               >
                 <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -181,12 +181,12 @@ export const Hero: React.FC = () => {
         >
           <motion.div
             animate={{ y: [0, 10, 0] }}
-            transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" as const }}
+            transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
             className="w-6 h-10 border-2 border-white/30 rounded-full flex justify-center"
           >
             <motion.div
               animate={{ y: [0, 12, 0] }}
-              transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" as const }}
+              transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
               className="w-1 h-3 bg-white/50 rounded-full mt-2"
             />
           </motion.div>

@@ -1,5 +1,5 @@
 import React from 'react';
-import { motion } from 'framer-motion';
+import { motion, Variants } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { 
   Sparkles, 
@@ -25,24 +25,24 @@ export const HeroModern: React.FC = () => {
   };
 
   // Floating animation variants
-  const floatingVariants = {
+  const floatingVariants: Variants = {
     animate: {
       y: [0, -20, 0],
       transition: {
         duration: 3,
         repeat: Infinity,
-        ease: "easeInOut" as const as const
+        ease: "easeInOut"
       }
     }
   };
 
-  const pulseVariants = {
+  const pulseVariants: Variants = {
     animate: {
       scale: [1, 1.05, 1],
       transition: {
         duration: 2,
         repeat: Infinity,
-        ease: "easeInOut" as const as const
+        ease: "easeInOut"
       }
     }
   };

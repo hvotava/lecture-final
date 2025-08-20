@@ -1,5 +1,8 @@
 {
   "$schema": "https://railway.app/railway.schema.json",
+  "build": {
+    "rootDirectory": "/"
+  },
   "deploy": {
     "healthcheckPath": "/api/health",
     "healthcheckTimeout": 100,
@@ -10,5 +13,5 @@
     "NO_CACHE": "1",
     "NODE_ENV": "production"
   },
-  "version": "2025-08-20-00:20-dockerfile-fix"
+  "version": "2025-08-20-00:25-root-fix"
 } 

@@ -66,11 +66,131 @@ router.get('/stream', (req, res) => {
 });
 
 /**
- * WebSocket route for Twilio Media Stream - OFFICIAL TWILIO + OPENAI REALTIME API INTEGRATION
+ * Simple WebSocket route for direct OpenAI Realtime API connection
+ */
+router.ws('/simple', (ws, req) => {
+  const sessionId = `simple_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+  console.log(`🎯 [${sessionId}] NEW Simple WebRTC connection - DIRECT OPENAI`);
+  
+  // Direct OpenAI WebSocket connection
+  const openaiApiKey = process.env.OPENAI_API_KEY;
+  if (!openaiApiKey) {
+    console.error(`❌ [${sessionId}] Missing OpenAI API key`);
+    ws.send(JSON.stringify({ type: 'error', error: 'Missing OpenAI API key' }));
+    ws.close();
+    return;
+  }
+  
+  console.log(`🔗 [${sessionId}] Connecting to OpenAI Realtime API...`);
+  
+  const openAiWs = new WebSocket(
+    'wss://api.openai.com/v1/realtime?model=gpt-4o-realtime-preview-2024-10-01',
+    {
+      headers: {
+        Authorization: `Bearer ${openaiApiKey}`,
+        "OpenAI-Beta": "realtime=v1"
+      }
+    }
+  );
+  
+  // OpenAI WebSocket handlers
+  openAiWs.on('open', () => {
+    console.log(`✅ [${sessionId}] Connected to OpenAI Realtime API`);
+    
+    // Send session configuration
+    const sessionUpdate = {
+      type: 'session.update',
+      session: {
+        modalities: ['text', 'audio'],
+        instructions: 'Jsi přátelský AI asistent. Komunikuj pouze v češtině. Buď nápomocný a odpovídej krátce a jasně.',
+        voice: 'alloy',
+        input_audio_format: 'pcm16',
+        output_audio_format: 'pcm16',
+        input_audio_transcription: {
+          model: 'whisper-1'
+        },
+        turn_detection: {
+          type: 'server_vad',
+          threshold: 0.5,
+          prefix_padding_ms: 300,
+          silence_duration_ms: 500
+        }
+      }
+    };
+    
+    openAiWs.send(JSON.stringify(sessionUpdate));
+    console.log(`⚙️ [${sessionId}] Session configuration sent`);
+  });
+  
+  openAiWs.on('message', (data) => {
+    try {
+      const response = JSON.parse(data.toString());
+      
+      // Forward all OpenAI messages to browser
+      if (ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify(response));
+      }
+      
+      // Log important events
+      if (LOG_EVENT_TYPES.includes(response.type)) {
+        console.log(`🤖 [${sessionId}] OpenAI: ${response.type}`);
+      }
+      
+    } catch (error) {
+      console.error(`❌ [${sessionId}] Error processing OpenAI message:`, error);
+    }
+  });
+  
+  openAiWs.on('error', (error) => {
+    console.error(`❌ [${sessionId}] OpenAI WebSocket error:`, error);
+    if (ws.readyState === WebSocket.OPEN) {
+      ws.send(JSON.stringify({ type: 'error', error: 'OpenAI connection error' }));
+    }
+  });
+  
+  openAiWs.on('close', () => {
+    console.log(`🔌 [${sessionId}] OpenAI WebSocket closed`);
+    if (ws.readyState === WebSocket.OPEN) {
+      ws.close();
+    }
+  });
+  
+  // Browser WebSocket handlers
+  ws.on('message', (message) => {
+    try {
+      const data = JSON.parse(message.toString());
+      console.log(`📨 [${sessionId}] Browser message: ${data.type}`);
+      
+      // Forward browser messages to OpenAI
+      if (openAiWs.readyState === WebSocket.OPEN) {
+        openAiWs.send(JSON.stringify(data));
+      } else {
+        console.log(`⚠️ [${sessionId}] OpenAI not connected, cannot forward message`);
+      }
+      
+    } catch (error) {
+      console.error(`❌ [${sessionId}] Error processing browser message:`, error);
+    }
+  });
+  
+  ws.on('close', () => {
+    console.log(`🔌 [${sessionId}] Browser WebSocket closed`);
+    if (openAiWs.readyState === WebSocket.OPEN) {
+      openAiWs.close();
+    }
+  });
+  
+  ws.on('error', (error) => {
+    console.error(`❌ [${sessionId}] Browser WebSocket error:`, error);
+  });
+});
+
+/**
+ * Original WebSocket route for Twilio Media Stream integration
  */
 router.ws('/stream', (ws, req) => {
   const sessionId = `session_${Date.now()}_${Math.random().toString(36).slice(2)}`;
-  console.log(`🎯 [${sessionId}] NEW Twilio WebSocket connected - OFFICIAL INTEGRATION`);
+  console.log(`🎯 [${sessionId}] NEW Twilio WebSocket connected - TWILIO INTEGRATION`);
   
   // Direct OpenAI WebSocket connection (no Sessions API!)
   const openaiApiKey = process.env.OPENAI_API_KEY;

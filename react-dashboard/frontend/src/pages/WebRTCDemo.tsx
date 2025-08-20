@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Container, Row, Col, Card, Alert, Button, Form, Badge } from 'react-bootstrap';
 import { Settings, Phone, Activity } from 'lucide-react';
-import WebRTCPhone from '../components/WebRTCPhone';
+import SimpleWebRTCPhone from '../components/SimpleWebRTCPhone';
 
 interface CallLog {
   id: string;
@@ -195,14 +195,13 @@ const WebRTCDemo: React.FC = () => {
 
       <Row>
         {/* WebRTC Phone */}
-        <Col md={8}>
-          <WebRTCPhone
-            userId="demo-user"
-            onCallStart={handleCallStart}
-            onCallEnd={handleCallEnd}
-            onError={handleCallError}
-          />
-        </Col>
+                    <Col md={8}>
+              <SimpleWebRTCPhone
+                onCallStart={handleCallStart}
+                onCallEnd={handleCallEnd}
+                onError={handleCallError}
+              />
+            </Col>
 
         {/* Call History */}
         <Col md={4}>

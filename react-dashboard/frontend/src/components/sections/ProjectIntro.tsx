@@ -38,7 +38,7 @@ const features = [
 
 export const ProjectIntro: React.FC = () => {
   return (
-    <section className="section bg-surface">
+    <section id="project-intro" className="section bg-surface">
       <div className="container">
         <div className="text-center mb-16">
           <motion.h2 

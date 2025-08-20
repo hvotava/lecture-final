@@ -25,7 +25,7 @@ const references = [
 
 export const References: React.FC = () => {
   return (
-    <section className="section bg-muted">
+    <section id="references" className="section bg-muted">
       <div className="container">
         <div className="text-center mb-12">
           <motion.h2 

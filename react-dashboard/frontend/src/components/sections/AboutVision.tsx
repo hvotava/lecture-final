@@ -11,7 +11,7 @@ import {
 
 export const AboutVision: React.FC = () => {
   return (
-    <section className="section bg-surface">
+    <section id="about-vision" className="section bg-surface">
       <div className="container">
         {/* About Us Section */}
         <div className="mb-20">

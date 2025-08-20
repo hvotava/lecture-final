@@ -188,7 +188,7 @@ export const Pricing: React.FC = () => {
   };
 
   return (
-    <section className="section bg-muted">
+    <section id="pricing" className="section bg-muted">
       <div className="container">
         <div className="text-center mb-16">
           <motion.h2 

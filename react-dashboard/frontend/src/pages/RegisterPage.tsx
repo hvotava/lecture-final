@@ -4,9 +4,6 @@ import { motion } from 'framer-motion';
 import { UserPlus, Mail, Lock, Eye, EyeOff, ArrowLeft, User } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 
-// Import YPO theme CSS
-import '../ui/ypo-theme.css';
-
 const RegisterPage: React.FC = () => {
   const [formData, setFormData] = useState({
     name: '',
@@ -69,25 +66,25 @@ const RegisterPage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-surface flex items-center justify-center p-6">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 flex items-center justify-center p-4">
       {/* Background decoration */}
-      <div className="absolute inset-0 overflow-hidden">
-        <div className="absolute top-20 left-10 w-20 h-20 bg-accent/10 rounded-full blur-xl" />
-        <div className="absolute bottom-20 right-10 w-32 h-32 bg-primary/10 rounded-full blur-2xl" />
-        <div className="absolute top-1/2 left-1/4 w-16 h-16 bg-accent/5 rounded-full blur-lg" />
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute top-1/4 left-1/4 w-64 h-64 bg-blue-200/30 rounded-full blur-3xl"></div>
+        <div className="absolute bottom-1/4 right-1/4 w-80 h-80 bg-indigo-200/20 rounded-full blur-3xl"></div>
+        <div className="absolute top-3/4 left-1/2 w-96 h-96 bg-purple-200/10 rounded-full blur-3xl"></div>
       </div>
 
       <div className="w-full max-w-md relative z-10">
         {/* Back to Home Button */}
         <motion.button
-          initial={{ opacity: 0, x: -20 }}
-          animate={{ opacity: 1, x: 0 }}
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
           onClick={handleBackToHome}
-          className="flex items-center gap-2 text-muted hover:text-primary transition-colors mb-6 focus-ring rounded-lg p-2"
+          className="mb-8 flex items-center gap-2 text-slate-600 hover:text-slate-800 transition-colors group"
         >
-          <ArrowLeft size={20} />
-          <span className="text-medium">Zpět na hlavní stránku</span>
+          <ArrowLeft size={20} className="transition-transform group-hover:-translate-x-1" />
+          <span className="font-medium">Zpět na hlavní stránku</span>
         </motion.button>
 
         {/* Register Card */}
@@ -95,221 +92,199 @@ const RegisterPage: React.FC = () => {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6 }}
-          className="card"
+          className="bg-white/80 backdrop-blur-xl border border-white/20 rounded-3xl shadow-2xl shadow-slate-200/50 p-8"
         >
-          <div className="card-body">
-            {/* Header */}
-            <div className="text-center mb-8">
-              <div className="w-16 h-16 bg-gradient-to-br from-accent to-accent-dark rounded-xl flex items-center justify-center mx-auto mb-4">
-                <UserPlus size={24} className="text-white" />
+          {/* Header */}
+          <div className="text-center mb-8">
+            <motion.div
+              initial={{ scale: 0 }}
+              animate={{ scale: 1 }}
+              transition={{ duration: 0.5, delay: 0.2 }}
+              className="w-16 h-16 bg-gradient-to-br from-green-500 to-emerald-600 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-lg"
+            >
+              <UserPlus size={24} className="text-white" />
+            </motion.div>
+            <motion.h1
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.3 }}
+              className="text-3xl font-bold text-slate-800 mb-2"
+            >
+              Registrace
+            </motion.h1>
+            <motion.p
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.4 }}
+              className="text-slate-600"
+            >
+              Vytvořte si účet AI Lektor
+            </motion.p>
+          </div>
+
+          {/* Error Alert */}
+          {error && (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="mb-6 p-4 bg-red-50 border border-red-200 rounded-xl"
+            >
+              <p className="text-red-700 text-sm font-medium">{error}</p>
+            </motion.div>
+          )}
+
+          {/* Form */}
+          <form onSubmit={handleSubmit} className="space-y-6">
+            {/* Name Field */}
+            <motion.div
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: 0.5 }}
+            >
+              <label htmlFor="name" className="block text-sm font-semibold text-slate-700 mb-2">
+                Celé jméno
+              </label>
+              <div className="relative">
+                <User size={20} className="absolute left-4 top-1/2 transform -translate-y-1/2 text-slate-400" />
+                <input
+                  id="name"
+                  name="name"
+                  type="text"
+                  value={formData.name}
+                  onChange={handleChange}
+                  className="w-full pl-12 pr-4 py-4 bg-slate-50/50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500/20 focus:border-green-500 transition-all placeholder-slate-400"
+                  placeholder="Jan Novák"
+                  required
+                />
               </div>
-              <h1 className="heading heading-2 text-primary mb-2">
-                Registrace
-              </h1>
-              <p className="text-medium text-muted">
-                Vytvořte si nový účet AI Lektor
-              </p>
-            </div>
+            </motion.div>
 
-            {/* Error Alert */}
-            {error && (
-              <motion.div
-                initial={{ opacity: 0, y: -10 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="bg-error/10 border border-error/20 rounded-lg p-4 mb-6"
-              >
-                <p className="text-small text-error font-medium">{error}</p>
-              </motion.div>
-            )}
-
-            {/* Register Form */}
-            <form onSubmit={handleSubmit} className="space-y-6">
-              {/* Username Field */}
-              <div>
-                <label htmlFor="name" className="block text-medium font-medium text-primary mb-2">
-                  Jméno
-                </label>
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <User size={20} className="text-muted" />
-                  </div>
-                  <input
-                    id="name"
-                    name="name"
-                    type="text"
-                    value={formData.name}
-                    onChange={handleChange}
-                    className="input-field pl-12 focus-ring"
-                    placeholder="Vaše jméno"
-                    required
-                    disabled={loading}
-                  />
-                </div>
+            {/* Email Field */}
+            <motion.div
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: 0.6 }}
+            >
+              <label htmlFor="email" className="block text-sm font-semibold text-slate-700 mb-2">
+                Email
+              </label>
+              <div className="relative">
+                <Mail size={20} className="absolute left-4 top-1/2 transform -translate-y-1/2 text-slate-400" />
+                <input
+                  id="email"
+                  name="email"
+                  type="email"
+                  value={formData.email}
+                  onChange={handleChange}
+                  className="w-full pl-12 pr-4 py-4 bg-slate-50/50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500/20 focus:border-green-500 transition-all placeholder-slate-400"
+                  placeholder="vas@email.com"
+                  required
+                />
               </div>
+            </motion.div>
 
-              {/* Email Field */}
-              <div>
-                <label htmlFor="email" className="block text-medium font-medium text-primary mb-2">
-                  E-mailová adresa
-                </label>
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <Mail size={20} className="text-muted" />
-                  </div>
-                  <input
-                    id="email"
-                    name="email"
-                    type="email"
-                    value={formData.email}
-                    onChange={handleChange}
-                    className="input-field pl-12 focus-ring"
-                    placeholder="vas@email.com"
-                    required
-                    disabled={loading}
-                  />
-                </div>
-              </div>
-
-              {/* Password Field */}
-              <div>
-                <label htmlFor="password" className="block text-medium font-medium text-primary mb-2">
-                  Heslo
-                </label>
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <Lock size={20} className="text-muted" />
-                  </div>
-                  <input
-                    id="password"
-                    name="password"
-                    type={showPassword ? 'text' : 'password'}
-                    value={formData.password}
-                    onChange={handleChange}
-                    className="input-field pl-12 pr-12 focus-ring"
-                    placeholder="Alespoň 6 znaků"
-                    required
-                    disabled={loading}
-                    minLength={6}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute inset-y-0 right-0 pr-3 flex items-center focus-ring rounded-lg"
-                    disabled={loading}
-                  >
-                    {showPassword ? (
-                      <EyeOff size={20} className="text-muted hover:text-primary transition-colors" />
-                    ) : (
-                      <Eye size={20} className="text-muted hover:text-primary transition-colors" />
-                    )}
-                  </button>
-                </div>
-              </div>
-
-              {/* Confirm Password Field */}
-              <div>
-                <label htmlFor="confirmPassword" className="block text-medium font-medium text-primary mb-2">
-                  Potvrzení hesla
-                </label>
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <Lock size={20} className="text-muted" />
-                  </div>
-                  <input
-                    id="confirmPassword"
-                    name="confirmPassword"
-                    type={showConfirmPassword ? 'text' : 'password'}
-                    value={formData.confirmPassword}
-                    onChange={handleChange}
-                    className="input-field pl-12 pr-12 focus-ring"
-                    placeholder="Zopakujte heslo"
-                    required
-                    disabled={loading}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                    className="absolute inset-y-0 right-0 pr-3 flex items-center focus-ring rounded-lg"
-                    disabled={loading}
-                  >
-                    {showConfirmPassword ? (
-                      <EyeOff size={20} className="text-muted hover:text-primary transition-colors" />
-                    ) : (
-                      <Eye size={20} className="text-muted hover:text-primary transition-colors" />
-                    )}
-                  </button>
-                </div>
-              </div>
-
-              {/* Submit Button */}
-              <button
-                type="submit"
-                disabled={loading}
-                className={`btn btn-primary w-full focus-ring ${loading ? 'opacity-75 cursor-not-allowed' : ''}`}
-              >
-                {loading ? (
-                  <div className="flex items-center justify-center gap-2">
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                    <span>Registruji...</span>
-                  </div>
-                ) : (
-                  <>
-                    <UserPlus size={20} />
-                    Vytvořit účet
-                  </>
-                )}
-              </button>
-            </form>
-
-            {/* Footer Links */}
-            <div className="mt-8 text-center space-y-4">
-              <div className="text-small text-muted">
-                Již máte účet?{' '}
-                <Link 
-                  to="/login" 
-                  className="text-accent hover:text-accent-dark font-medium transition-colors focus-ring rounded px-1"
+            {/* Password Field */}
+            <motion.div
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: 0.7 }}
+            >
+              <label htmlFor="password" className="block text-sm font-semibold text-slate-700 mb-2">
+                Heslo
+              </label>
+              <div className="relative">
+                <Lock size={20} className="absolute left-4 top-1/2 transform -translate-y-1/2 text-slate-400" />
+                <input
+                  id="password"
+                  name="password"
+                  type={showPassword ? 'text' : 'password'}
+                  value={formData.password}
+                  onChange={handleChange}
+                  className="w-full pl-12 pr-12 py-4 bg-slate-50/50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500/20 focus:border-green-500 transition-all placeholder-slate-400"
+                  placeholder="Alespoň 6 znaků"
+                  required
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-4 top-1/2 transform -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
                 >
-                  Přihlaste se
-                </Link>
+                  {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                </button>
               </div>
-              
-              <div className="border-t border-gray-200 pt-4">
-                <p className="text-xs text-muted">
-                  Registrací souhlasíte s našimi podmínkami použití a zásadami ochrany osobních údajů.
-                </p>
-              </div>
-            </div>
-          </div>
-        </motion.div>
+            </motion.div>
 
-        {/* Benefits */}
-        <motion.div
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.2 }}
-          className="mt-6 card bg-gray-50"
-        >
-          <div className="card-body">
-            <h3 className="heading heading-6 text-primary mb-3">Výhody AI Lektor</h3>
-            <div className="space-y-2 text-small">
-              <div className="flex items-center gap-2">
-                <div className="w-2 h-2 bg-accent rounded-full"></div>
-                <span>Personalizované hlasové vzdělávání</span>
+            {/* Confirm Password Field */}
+            <motion.div
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: 0.8 }}
+            >
+              <label htmlFor="confirmPassword" className="block text-sm font-semibold text-slate-700 mb-2">
+                Potvrzení hesla
+              </label>
+              <div className="relative">
+                <Lock size={20} className="absolute left-4 top-1/2 transform -translate-y-1/2 text-slate-400" />
+                <input
+                  id="confirmPassword"
+                  name="confirmPassword"
+                  type={showConfirmPassword ? 'text' : 'password'}
+                  value={formData.confirmPassword}
+                  onChange={handleChange}
+                  className="w-full pl-12 pr-12 py-4 bg-slate-50/50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500/20 focus:border-green-500 transition-all placeholder-slate-400"
+                  placeholder="Zopakujte heslo"
+                  required
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                  className="absolute right-4 top-1/2 transform -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
+                >
+                  {showConfirmPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                </button>
               </div>
-              <div className="flex items-center gap-2">
-                <div className="w-2 h-2 bg-accent rounded-full"></div>
-                <span>Adaptivní učební plány</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="w-2 h-2 bg-accent rounded-full"></div>
-                <span>Měření pokroku v reálném čase</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="w-2 h-2 bg-accent rounded-full"></div>
-                <span>Podpora více jazyků</span>
-              </div>
-            </div>
-          </div>
+            </motion.div>
+
+            {/* Submit Button */}
+            <motion.button
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.9 }}
+              type="submit"
+              disabled={loading}
+              className="w-full bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white font-semibold py-4 px-6 rounded-xl transition-all duration-200 shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed transform hover:-translate-y-0.5"
+            >
+              {loading ? (
+                <div className="flex items-center justify-center gap-2">
+                  <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                  <span>Registruji...</span>
+                </div>
+              ) : (
+                <div className="flex items-center justify-center gap-2">
+                  <UserPlus size={20} />
+                  <span>Vytvořit účet</span>
+                </div>
+              )}
+            </motion.button>
+          </form>
+
+          {/* Login Link */}
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 1.0 }}
+            className="mt-8 text-center"
+          >
+            <p className="text-slate-600">
+              Už máte účet?{' '}
+              <Link
+                to="/login"
+                className="font-semibold text-green-600 hover:text-green-700 transition-colors"
+              >
+                Přihlaste se zde
+              </Link>
+            </p>
+          </motion.div>
         </motion.div>
       </div>
     </div>

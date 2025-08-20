@@ -8,14 +8,12 @@ import { AboutVision } from '../components/sections/AboutVision';
 import { Pricing } from '../components/sections/Pricing';
 import { References } from '../components/sections/References';
 
+// Import YPO theme CSS
+import '../ui/ypo-theme.css';
+
 const LandingPage: React.FC = () => {
   return (
-    <div className="min-h-screen bg-surface">
-      {/* Import YPO theme CSS */}
-      <style>
-        {`@import url('./ui/ypo-theme.css');`}
-      </style>
-      
+    <div className="min-h-screen ypo-bg-surface">
       {/* Header - sticky with transparency effect */}
       <Header />
       

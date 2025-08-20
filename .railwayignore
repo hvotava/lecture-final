@@ -1,66 +1,30 @@
-# RAILPACK CACHE FIX: Exclude ALL problematic directories
-# This prevents RAILPACK from trying to cache non-existent folders
+# RAILPACK Build Optimization
+# Exclude only essential build artifacts
 
-# Node.js dependencies and build artifacts
+# Node.js dependencies
 node_modules/
 **/node_modules/
-**/node_modules/**
-react-dashboard/frontend/node_modules/
-react-dashboard/backend/node_modules/
-react-dashboard/frontend/build/
-react-dashboard/frontend/dist/
-coverage/
-.npm
-.env*
 
-# IDE and temporary files
+# Build outputs
+**/build/
+**/dist/
+
+# Cache directories
+.cache/
+.npm/
+.yarn/
+
+# Environment files
+.env*
+.env.local
+.env.production
+
+# IDE and OS files
 .vscode/
 .idea/
-*.swp
-*.swo
-*~
-
-# OS files
 .DS_Store
 Thumbs.db
 
 # Logs
 *.log
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-
-# Cache directories - EXCLUDE ALL (this is the key fix)
-.cache/
-.npm/
-.yarn/
-**/.cache/
-**/.npm/
-**/.yarn/
-**/cache/
-**/tmp/
-
-# Force exclude problematic directories
-**/node_modules/
-**/build/
-**/dist/
-**/.next/
-**/.nuxt/
-**/target/
-**/out/
-
-# Git and documentation
-.git/
-*.md
-!README.md
-
-# Docker files (force RAILPACK)
-Dockerfile*
-.dockerignore
-
-# Additional exclusions for RAILPACK
-**/coverage/
-**/test-results/
-**/playwright-report/
-**/.nyc_output/
-**/junit.xml 
+npm-debug.log* 

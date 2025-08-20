@@ -4,7 +4,7 @@
   "description": "React Dashboard with Node.js backend",
   "main": "react-dashboard/backend/server.js",
   "scripts": {
-    "start:prod": "cd react-dashboard/frontend && npm ci && npm run build",
+    "start:prod": "sh -c 'cd react-dashboard/frontend 2>/dev/null || true; npm ci && npm run build && mkdir -p node_modules'",
     "postinstall": "cd react-dashboard/frontend && npm ci && npm run build",
     "start": "cd react-dashboard/backend && npm start"
   },

@@ -2,9 +2,10 @@
   "$schema": "https://railway.app/railway.schema.json",
   "build": {
     "builder": "RAILPACK",
-    "rootDirectory": "react-dashboard/frontend"
+    "buildCommand": "cd react-dashboard/frontend && npm ci && npm run build"
   },
   "deploy": {
+    "startCommand": "cd react-dashboard/backend && npm start",
     "healthcheckPath": "/api/health",
     "healthcheckTimeout": 100,
     "restartPolicyType": "ON_FAILURE",
@@ -14,5 +15,5 @@
     "NO_CACHE": "1",
     "NODE_ENV": "production"
   },
-  "version": "2025-08-20-00:10-no-cache-fix"
+  "version": "2025-08-20-00:15-fullstack-fix"
 } 

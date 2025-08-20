@@ -2,10 +2,9 @@
   "$schema": "https://railway.app/railway.schema.json",
   "build": {
     "builder": "RAILPACK",
-    "buildCommand": "npm run start:prod"
+    "rootDirectory": "react-dashboard/frontend"
   },
   "deploy": {
-    "startCommand": "npm start",
     "healthcheckPath": "/api/health",
     "healthcheckTimeout": 100,
     "restartPolicyType": "ON_FAILURE",
@@ -16,5 +15,5 @@
     "RAILPACK_CACHE_DIR": "/tmp",
     "NODE_ENV": "production"
   },
-  "version": "2025-08-19-23:45-railpack-cache-fix"
+  "version": "2025-08-20-00:05-rootdir-frontend"
 } 

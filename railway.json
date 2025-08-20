@@ -11,5 +11,10 @@
     "restartPolicyType": "ON_FAILURE",
     "restartPolicyMaxRetries": 10
   },
-  "version": "2025-08-19-23:40-command-fix"
+  "variables": {
+    "RAILPACK_NO_CACHE": "true",
+    "RAILPACK_CACHE_DIR": "/tmp",
+    "NODE_ENV": "production"
+  },
+  "version": "2025-08-19-23:45-railpack-cache-fix"
 } 

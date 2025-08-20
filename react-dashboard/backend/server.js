@@ -98,13 +98,15 @@ app.use('/api/tests', require('./routes/tests'));
 app.use('/api/dashboard', require('./routes/dashboard'));
 app.use('/api/twilio', twilioRoutes);
 app.use('/api/webrtc', webrtcRoutes);
-// DISABLED: Conflicting WebSocket handler - using /api/webrtc/stream instead
-// app.use('/api/twilio/webrtc', require('./routes/twilio-webrtc').router);
+// ENABLED: WebRTC signaling for browser clients
+app.use('/api/twilio/webrtc', require('./routes/twilio-webrtc').router);
 
 // DEBUG: Log registered routes
 console.log('🛣️ REGISTERED ROUTES:');
-console.log('   - /api/webrtc/* (including /api/webrtc/voice)');
+console.log('   - /api/webrtc/* (including /api/webrtc/stream)');
+console.log('   - /api/twilio/webrtc/* (including /api/twilio/webrtc/signaling)');
 console.log('   - WebRTC routes loaded from:', require.resolve('./routes/webrtc'));
+console.log('   - Twilio WebRTC routes loaded from:', require.resolve('./routes/twilio-webrtc'));
 console.log('🛣️ Routes registration complete');
 app.use('/api/content', require('./routes/content'));
 app.use('/api/ai-proxy', require('./routes/ai-proxy'));
